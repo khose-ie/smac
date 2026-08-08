@@ -1,4 +1,4 @@
-# Sample Abstraction-Layer for MCU
+# Sample MCU Abstract Construction
 
 This project provides a standardized abstraction layer for microcontroller units (MCUs), facilitating consistent and simplified integration of embedded software across different platforms.
 
