@@ -58,7 +58,7 @@ Cpp11BracedListStyle: false
 IncludeBlocks: Preserve
 
 IndentCaseBlocks: false
-IndentCaseLabels: false
+IndentCaseLabels: true
 IndentWidth: 4
 
 NamespaceIndentation: All
