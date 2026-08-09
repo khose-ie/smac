@@ -18,9 +18,16 @@
 extern "C" {
 #endif // __cplusplus
 
+/// @brief Special timeout values for OS operations
+/// @details These values are used as special timeout indicators for OS operations.
+/// @note SMAC_OS_WAIT_NOW indicates no wait, while SMAC_OS_WAIT_FOREVER indicates an indefinite
+/// wait.
 #define SMAC_OS_WAIT_NOW     0
 #define SMAC_OS_WAIT_FOREVER UINT32_MAX
 
+/// @brief Special event flag values for OS operations
+/// @details These values are used as special indicators for event flags in OS operations.
+/// @note SMAC_OS_EVENT_NONE indicates no event, while SMAC_OS_EVENT_ALL indicates all events.
 #define SMAC_OS_EVENT_NONE (0x00000000U)
 #define SMAC_OS_EVENT_ALL  (0xFFFFFFFFU)
 
