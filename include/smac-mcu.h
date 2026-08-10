@@ -7,6 +7,22 @@
 /// interfaces for UART operations and event handling.
 /// @author Khose-ie<khose-ie@outlook.com>
 /// @date 2024-08-09
+/// @note Callback Design for Rust FFI Support
+/// All event callbacks (e.g., @ref smac_mcu_set_uart_event) are registered globally for the entire
+/// driver instance set. Per-instance context is supplied via the @c event_data parameter in
+/// functions like @ref smac_uart_open_event.
+///
+/// This design intentionally separates the dispatcher (the global callback function) from the
+/// instance-specific state to accommodate Rust FFI. In Rust, a trait object (`&dyn Trait`) is a
+/// "fat pointer" consisting of a data pointer and a vtable pointer, which cannot be stored directly
+/// in a C `void*` (a single machine word). Instead, the Rust side splits the fat pointer into a
+/// thin context structure (data + vtable) and passes its pointer as @c event_data. The global
+/// callback then forwards this pointer back to Rust, where it is reassembled into the original
+/// trait object, enabling per-instance method dispatch without requiring per-instance callback
+/// registration in C.
+///
+/// This approach is efficient, type-safe, and follows the standard FFI pattern for dynamic dispatch
+/// across language boundaries.
 
 #include <smac.h>
 #include <stdbool.h>
@@ -522,7 +538,7 @@ smacRetCode_t smac_flash_write32(smacFlash_t flash, uint32_t address, const uint
 /// @param data The data to be written.
 /// @param size The size of the data to be written.
 /// @return @ref SMAC_RET_OK if the write operation is successful, otherwise an error code.
-smacRetCode_t smac_flash_write64(smacFlash_t flash, uint32_t address, const uint32_t* data,
+smacRetCode_t smac_flash_write64(smacFlash_t flash, uint32_t address, const uint64_t* data,
                                  uint32_t size);
 
 /// ============================================================================
@@ -1140,7 +1156,7 @@ smacWdt_t smac_wdt_create(void* handle);
 /// @brief Drop a Watchdog instance within the MCU abstraction layer.
 /// @details This function releases the resources associated with the specified Watchdog instance.
 /// @param wdt The Watchdog instance to be dropped.
-smacRetCode_t smac_wdt_drop(smacWdt_t wdt);
+void smac_wdt_drop(smacWdt_t wdt);
 
 /// @brief Refresh the specified Watchdog instance.
 /// @details This function refreshes the specified Watchdog instance to prevent it from timing out.
