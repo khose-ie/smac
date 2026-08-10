@@ -59,6 +59,20 @@ typedef void* smacTaskHandle_t;
 /// @details Opaque handle representing a timer object
 typedef void* smacTimerHandle_t;
 
+typedef enum
+{
+    SMAC_OS_STATE_NONE    = 0,
+    SMAC_OS_STATE_READY   = 1,
+    SMAC_OS_STATE_RUNNING = 2,
+    SMAC_OS_STATE_IDLE    = 3,
+    SMAC_OS_STATE_SLEEP   = 4,
+    SMAC_OS_STATE_STOP    = 5,
+    SMAC_OS_STATE_STANDBY = 6,
+    SMAC_OS_STATE_FAULT   = 7,
+    SMAC_OS_STATE_PANIC   = 8,
+    SMAC_OS_STATE_HALT    = 9
+} smacOsState_t;
+
 /// @brief Task state enumeration
 /// @details Represents the various states a task can be in
 typedef enum
@@ -110,6 +124,16 @@ smacRetCode_t smac_os_initialize(void);
 ///          memory allocations within the OS abstraction layer.
 /// @return SMAC_RET_OK on success, error code otherwise
 smacRetCode_t smac_os_initialize_mem_pool(void);
+
+/// @brief Start the OS kernel
+/// @details This function starts the OS kernel if it is in the initialized state.
+/// @return SMAC_RET_OK on success, error code otherwise
+smacRetCode_t smac_os_start(void);
+
+/// @brief  Get the current OS state
+/// @details This function retrieves the current state of the OS.
+/// @return Current OS state as a value of type @ref smacOsState_t
+smacOsState_t smac_os_state(void);
 
 /// @brief Get the current system tick count
 /// @return Current system tick count in milliseconds
