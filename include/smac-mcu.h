@@ -371,6 +371,21 @@ smacAdc_t smac_adc_create(void* handle);
 /// @param adc The ADC instance to be dropped.
 void smac_adc_drop(smacAdc_t adc);
 
+/// @brief Set ADC event callbacks for the specified ADC instance.
+/// @param adc The ADC instance.
+/// @param data The event data to be associated with the ADC instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the ADC instance, you could don't call
+/// this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
+smacRetCode_t smac_adc_set_event(smacAdc_t adc, smacMcuEventData_t data);
+
+/// @brief Clean ADC event callbacks for the specified ADC instance.
+/// @param adc The ADC instance.
+/// @note This function will remove all event callbacks associated with the specified ADC instance.
+void smac_adc_clean_event(smacAdc_t adc);
+
 /// @brief Perform a conversion on the specified ADC instance.
 /// @details This function performs a conversion on the specified ADC instance with the provided
 /// data.
@@ -421,6 +436,21 @@ smacCan_t smac_can_create(void* handle, uint32_t fifo);
 /// @details This function releases the resources associated with the specified CAN instance.
 /// @param can The CAN instance to be dropped.
 void smac_can_drop(smacCan_t can);
+
+/// @brief Set CAN event callbacks for the specified CAN instance.
+/// @param can The CAN instance.
+/// @param data The event data to be associated with the CAN instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the CAN instance, you could don't call
+/// this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
+smacRetCode_t smac_can_set_event(smacCan_t can, smacMcuEventData_t data);
+
+/// @brief Clean CAN event callbacks for the specified CAN instance.
+/// @param can The CAN instance.
+/// @note This function will remove all event callbacks associated with the specified CAN instance.
+void smac_can_clean_event(smacCan_t can);
 
 /// @brief Activate a CAN instance within the MCU abstraction layer.
 /// @details This function activates the specified CAN instance, making it ready for communication.
@@ -559,6 +589,21 @@ smacI2c_t smac_i2c_master_create(void* handle);
 /// @param i2c The I2C master instance to be dropped.
 void smac_i2c_master_drop(smacI2c_t i2c);
 
+/// @brief Set I2C master event callbacks for the specified I2C master instance.
+/// @param i2c The I2C master instance.
+/// @param data The event data to be associated with the I2C master instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the I2C master instance, you could don't
+/// call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
+smacRetCode_t smac_i2c_master_set_event(smacI2c_t i2c, smacMcuEventData_t data);
+
+/// @brief Clean I2C master event callbacks for the specified I2C master instance.
+/// @param i2c The I2C master instance.
+/// @note This function will remove all event callbacks associated with the specified I2C master instance.
+void smac_i2c_master_clean_event(smacI2c_t i2c);
+
 /// @brief Check if the I2C master device is in a ready state.
 /// @param i2c The I2C master instance.
 /// @return true if the device is ready, otherwise false.
@@ -625,6 +670,19 @@ smacI2c_t smac_i2c_slave_create(void* handle);
 /// @details This function releases the resources associated with the specified I2C slave instance.
 /// @param i2c The I2C slave instance to be dropped.
 void smac_i2c_slave_drop(smacI2c_t i2c);
+
+/// @brief Set I2C slave event callbacks for the specified I2C slave instance.
+/// @param i2c The I2C slave instance.
+/// @param data The event data to be associated with the I2C slave instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the I2C slave instance, you could don't call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+smacRetCode_t smac_i2c_slave_set_event(smacI2c_t i2c, smacMcuEventData_t data);
+
+/// @brief Clean I2C slave event callbacks for the specified I2C slave instance.
+/// @param i2c The I2C slave instance.
+/// @note This function will remove all event callbacks associated with the specified I2C slave instance.
+void smac_i2c_slave_clean_event(smacI2c_t i2c);
 
 /// @brief Listen for incoming communication on the specified I2C slave instance.
 /// @details This function puts the I2C slave instance into a listening state, ready to respond to
@@ -694,6 +752,19 @@ smacI2c_t smac_i2c_mem_create(void* handle);
 /// @details This function releases the resources associated with the specified I2C memory instance.
 /// @param i2c The I2C memory instance to be dropped.
 void smac_i2c_mem_drop(smacI2c_t i2c);
+
+/// @brief Set I2C memory event callbacks for the specified I2C memory instance.
+/// @param i2c The I2C memory instance.
+/// @param data The event data to be associated with the I2C memory instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the I2C memory instance, you could don't call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+smacRetCode_t smac_i2c_mem_set_event(smacI2c_t i2c, smacMcuEventData_t data);
+
+/// @brief Clean I2C memory event callbacks for the specified I2C memory instance.
+/// @param i2c The I2C memory instance.
+/// @note This function will remove all event callbacks associated with the specified I2C memory instance.
+void smac_i2c_mem_clean_event(smacI2c_t i2c);
 
 /// @brief Check if the I2C memory device is in a ready state.
 /// @details This function checks whether the I2C memory device associated with the specified I2C
@@ -783,6 +854,19 @@ smacIo_t smac_io_create(void* handle, uint32_t pin);
 /// @param io The IO instance to be dropped.
 void smac_io_drop(smacIo_t io);
 
+/// @brief Set IO event callbacks for the specified IO instance.
+/// @param io The IO instance.
+/// @param data The event data to be associated with the IO instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the IO instance, you could don't call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+smacRetCode_t smac_io_set_event(smacIo_t io, smacMcuEventData_t data);
+
+/// @brief Clean IO event callbacks for the specified IO instance.
+/// @param io The IO instance.
+/// @note This function will remove all event callbacks associated with the specified IO instance.
+void smac_io_clean_event(smacIo_t io);
+
 /// @brief Get the current state of the specified IO instance.
 /// @details This function retrieves the current state of the IO instance within the MCU abstraction
 /// layer.
@@ -821,6 +905,19 @@ smacPwm_t smac_pwm_create(void* handle, uint32_t channel);
 /// @details This function releases the resources associated with the specified PWM instance.
 /// @param pwm The PWM instance to be dropped.
 void smac_pwm_drop(smacPwm_t pwm);
+
+/// @brief Set PWM event callbacks for the specified PWM instance.
+/// @param pwm The PWM instance.
+/// @param data The event data to be associated with the PWM instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the PWM instance, you could don't call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+smacRetCode_t smac_pwm_set_event(smacPwm_t pwm, smacMcuEventData_t data);
+
+/// @brief Clean PWM event callbacks for the specified PWM instance.
+/// @param pwm The PWM instance.
+/// @note This function will remove all event callbacks associated with the specified PWM instance.
+void smac_pwm_clean_event(smacPwm_t pwm);
 
 /// @brief Activate the specified PWM instance.
 /// @details This function activates the PWM signal generation for the specified PWM instance.
@@ -885,6 +982,19 @@ smacSpi_t smac_spi_create(void* handle);
 /// @details This function releases the resources associated with the specified SPI instance.
 /// @param spi The SPI instance to be dropped.
 void smac_spi_drop(smacSpi_t spi);
+
+/// @brief Set SPI event callbacks for the specified SPI instance.
+/// @param spi The SPI instance.
+/// @param data The event data to be associated with the SPI instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the SPI instance, you could don't call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+smacRetCode_t smac_spi_set_event(smacSpi_t spi, smacMcuEventData_t data);
+
+/// @brief Clean SPI event callbacks for the specified SPI instance.
+/// @param spi The SPI instance.
+/// @note This function will remove all event callbacks associated with the specified SPI instance.
+void smac_spi_clean_event(smacSpi_t spi);
 
 /// @brief Transmit data over the specified SPI instance.
 /// @details This function transmits the specified data over the SPI instance within the MCU
@@ -973,6 +1083,19 @@ smacTim_t smac_tim_create(void* handle);
 /// @param tim The Timer instance to be dropped.
 void smac_tim_drop(smacTim_t tim);
 
+/// @brief Set Timer event callbacks for the specified Timer instance.
+/// @param tim The Timer instance.
+/// @param data The event data to be associated with the Timer instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the Timer instance, you could don't call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+smacRetCode_t smac_tim_set_event(smacTim_t tim, smacMcuEventData_t data);
+
+/// @brief Clean Timer event callbacks for the specified Timer instance.
+/// @param tim The Timer instance.
+/// @note This function will remove all event callbacks associated with the specified Timer instance.
+void smac_tim_clean_event(smacTim_t tim);
+
 /// @brief Get the current count of the specified Timer instance.
 /// @details This function retrieves the current count value of the specified Timer instance within
 /// the MCU abstraction layer.
@@ -1044,21 +1167,19 @@ smacUart_t smac_uart_create(void* handle);
 /// @param uart The UART instance to be dropped.
 void smac_uart_drop(smacUart_t uart);
 
-/// @brief Open UART event handling for the specified UART instance.
-/// @details This function enables event/interrupt handling for the specified UART instance within
-/// the MCU abstraction layer.
+/// @brief Set UART event handling for the specified UART instance.
+/// @details This function configures event/interrupt handling for the specified UART instance
+/// within the MCU abstraction layer.
 /// @param uart The UART instance.
 /// @param event_data The event data associated with the UART instance.
-/// @return @ref SMAC_RET_OK if the event handling is opened successfully, otherwise an error code.
-/// @note If open the event, and set the UART event callbacks using @ref smac_mcu_set_uart_event,
-/// the specified callbacks will be invoked for the corresponding events.
-smacRetCode_t smac_uart_open_event(smacUart_t uart, smacMcuEventData_t event_data);
+/// @return @ref SMAC_RET_OK if the event handling is set successfully, otherwise an error code.
+smacRetCode_t smac_uart_set_event(smacUart_t uart, smacMcuEventData_t event_data);
 
-/// @brief Close UART event handling for the specified UART instance.
-/// @details This function disables event/interrupt handling for the specified UART instance within
-/// the MCU abstraction layer.
+/// @brief Clean UART event handling for the specified UART instance.
+/// @details This function disables and cleans up event/interrupt handling for the specified UART
+/// instance within the MCU abstraction layer.
 /// @param uart The UART instance.
-void smac_uart_close_event(smacUart_t uart);
+void smac_uart_clean_event(smacUart_t uart);
 
 /// @brief Transmit data over the specified UART instance.
 /// @details This function transmits the specified data over the UART instance within the MCU
