@@ -48,6 +48,10 @@ typedef void* smacAdc_t;
 /// @details This type represents the handle associated with a CAN instance.
 typedef void* smacCan_t;
 
+/// @brief CAN FD handle type.
+/// @details This type represents the handle associated with a CAN FD instance.
+typedef void* smacCanFd_t;
+
 /// @brief Internal FLASH handle type.
 /// @details This type represents the handle associated with an Internal FLASH instance.
 typedef void* smacFlash_t;
@@ -99,10 +103,25 @@ typedef void (*smacAdcEventOverThreshold)(smacAdc_t adc, smacMcuEventData_t even
 typedef void (*smacAdcEventError)(smacAdc_t adc, smacMcuEventData_t event_data,
                                   uint32_t error_code);
 
+/// @brief CAN event callback for transmission complete.
+/// @param can The CAN instance.
+/// @param event_data The event data associated with the transmission complete event.
+typedef void (*smacCanEventTxComplete)(smacCan_t can, smacMcuEventData_t event_data);
+
 /// @brief CAN event callback for reception complete.
 /// @param can The CAN instance.
 /// @param event_data The event data associated with the reception complete event.
 typedef void (*smacCanEventRxComplete)(smacCan_t can, smacMcuEventData_t event_data);
+
+/// @brief CAN FD event callback for transmission complete.
+/// @param canfd The CAN FD instance.
+/// @param event_data The event data associated with the transmission complete event.
+typedef void (*smacCanFdEventTxComplete)(smacCanFd_t canfd, smacMcuEventData_t event_data);
+
+/// @brief CAN FD event callback for reception complete.
+/// @param canfd The CAN FD instance.
+/// @param event_data The event data associated with the reception complete event.
+typedef void (*smacCanFdEventRxComplete)(smacCanFd_t canfd, smacMcuEventData_t event_data);
 
 /// @brief I2C master event callback for transmission complete.
 /// @param i2c The I2C instance.
@@ -219,29 +238,55 @@ typedef void (*smacUartEventAbort)(smacUart_t uart, smacMcuEventData_t event_dat
 typedef void (*smacUartEventError)(smacUart_t uart, smacMcuEventData_t event_data,
                                    uint32_t error_code);
 
+/// @brief CAN bit rate switch type.
+/// @details This type defines whether the CAN FD message should use a bit rate switch.
+typedef bool smacCanBitRateSwitch;
+
+/// @brief CAN frame kind type.
+/// @details This type defines whether the CAN message uses a standard or extended frame format.
+typedef enum
+{
+    SMAC_CAN_FRAME_STANDARD,
+    SMAC_CAN_FRAME_EXTENDED,
+} smacCanFrameKind;
+
+/// @brief CAN request kind type.
+/// @details This type defines whether the CAN message is a data frame or a remote frame.
+typedef enum
+{
+    SMAC_CAN_DATA,
+    SMAC_CAN_REMOTE,
+} smacCanRequestKind;
+
+/// @brief CAN error state type.
+/// @details This type defines the error state of the CAN controller, indicating whether it is
+/// active or passive.
+typedef enum
+{
+    SMAC_CAN_ERROR_ACTIVE,
+    SMAC_CAN_ERROR_PASSIVE
+} smacCanErrorState;
+
+typedef enum
+{
+    SMAC_CAN_CLASSIC,
+    SMAC_CAN_FD
+} smacCanFormat;
+
 /// @brief CAN message header structure.
 /// @details This structure defines the header of a CAN message, including standard and extended
 /// IDs, identifier type, remote transmission request, and data length code.
 /// @note The fields in this structure should be populated according to the CAN message being
 /// transmitted or received.
+/// @note The identifier field should be populated with the appropriate CAN identifier, whether
+/// standard or extended.
 typedef struct
 {
-    uint32_t STD_ID;
-    uint32_t EXT_ID;
-    uint32_t IDE;
-    uint32_t RTR;
-    uint32_t DLC;
+    uint32_t ident;
+    smacCanFrameKind frame_kind;
+    smacCanRequestKind request_kind;
+    uint32_t data_length;
 } smacCanMessageHead;
-
-/// @brief CAN message data structure.
-/// @details This structure defines the data portion of a CAN message, which typically contains up
-/// to 8 bytes of data.
-/// @note The content array should be populated according to the CAN message being transmitted or
-/// received.
-typedef struct
-{
-    uint8_t content[8];
-} smacCanMessageData;
 
 /// @brief CAN message structure.
 /// @details This structure defines a complete CAN message, including both the header and data
@@ -251,8 +296,46 @@ typedef struct
 typedef struct
 {
     smacCanMessageHead head;
-    smacCanMessageData data;
+    uint8_t data[8];
 } smacCanMessage;
+
+/// @brief CAN FD message header structure.
+/// @details This structure defines the header of a CAN FD message, including standard and extended
+/// IDs, identifier type, error state, bit rate switch, and data length code.
+/// @note The fields in this structure should be populated according to the CAN FD message being
+/// transmitted or received.
+/// @note The identifier field should be populated with the appropriate CAN FD identifier, whether
+/// standard or extended.
+typedef struct
+{
+    uint32_t ident;
+    smacCanFrameKind frame_kind;
+    smacCanRequestKind request_kind;
+    smacCanErrorState error_state;
+    smacCanBitRateSwitch switch_bit_rate;
+    smacCanFormat format;
+    uint32_t data_length;
+} smacCanFdMessageHead;
+
+/// @brief CAN FD message structure.
+/// @details This structure defines a complete CAN FD message, including both the header and data
+/// portions.
+/// @note The fields in this structure should be populated according to the CAN FD message being
+/// transmitted or received.
+typedef struct
+{
+    smacCanFdMessageHead head;
+    uint8_t data[64];
+} smacCanFdMessage;
+
+typedef enum
+{
+    SMAC_FLASH_WRITE_8BIT,
+    SMAC_FLASH_WRITE_16BIT,
+    SMAC_FLASH_WRITE_32BIT,
+    SMAC_FLASH_WRITE_64BIT,
+    SMAC_FLASH_WRITE_128BIT,
+} smacFlashWriteWide;
 
 /// @brief I2C memory address size enumeration.
 /// @details This enumeration defines the possible memory address sizes for I2C memory operations.
@@ -272,9 +355,109 @@ typedef enum
     SMAC_IO_SET = 1
 } smacIoState;
 
+/// @brief Macro to initialize a standard CAN message.
+/// @details This macro sets up the CAN message header with the specified identifier, request kind,
+/// and data length.
+/// @param message The CAN message structure to initialize.
+/// @param ident The standard identifier for the CAN message.
+/// @param request_kind The request kind for the CAN message (e.g., data frame or remote frame).
+/// @param data_length The length of the data in the CAN message.
+/// @note The message data should be set separately using the smac_can_message_set_data macro.
+#define smac_can_message_init(message, ident, request_kind, data_length)                           \
+    {                                                                                              \
+        message.head.ident        = ident;                                                         \
+        message.head.frame_kind   = SMAC_CAN_FRAME_STANDARD;                                       \
+        message.head.request_kind = request_kind;                                                  \
+        message.head.data_length  = data_length;                                                   \
+    }
+
+/// @brief Macro to initialize an extended CAN message.
+/// @details This macro sets up the CAN message header with the specified identifier, extended
+/// identifier, request kind, and data length.
+/// @param message The CAN message structure to initialize.
+/// @param ident The standard identifier for the CAN message.
+/// @param request_kind The request kind for the CAN message (e.g., data frame or remote frame).
+/// @param data_length The length of the data in the CAN message.
+/// @note The message data should be set separately using the smac_can_message_set_data macro.
+#define smac_can_message_init_extended(message, ident, request_kind, data_length)                  \
+    {                                                                                              \
+        message.head.ident        = ident;                                                         \
+        message.head.frame_kind   = SMAC_CAN_FRAME_EXTENDED;                                       \
+        message.head.request_kind = request_kind;                                                  \
+        message.head.data_length  = data_length;                                                   \
+    }
+
+/// @brief Macro to set the data for a CAN message.
+/// @details This macro copies the data from the provided array into the CAN message's data field.
+/// The number of bytes copied is the lesser of the message's data length and 8.
+/// @param message The CAN message structure to set the data for.
+/// @param data_array The array containing the data to copy into the CAN message.
+#define smac_can_message_set_data(message, data_array)                                             \
+    {                                                                                              \
+        memcpy((message)->data, data_array,                                                           \
+               (message)->head.data_length > 8 ? 8 : (message)->head.data_length);                       \
+    }
+
+/// @brief Macro to initialize a CAN FD message.
+/// @details This macro sets up the CAN FD message header with the specified identifier, error
+/// status, switch bit rate, and data length.
+/// @param message The CAN FD message structure to initialize.
+/// @param ident The standard identifier for the CAN FD message.
+/// @param frame_kind The frame kind for the CAN FD message.
+/// @param request_kind The request kind for the CAN FD message.
+/// @param data_length The length of the data in the CAN FD message.
+/// @param error_status The error status for the CAN FD message.
+/// @param switch_bit_rate The switch bit rate for the CAN FD message.
+/// @note The message data should be set separately using the smac_can_fd_message_set_data macro.
+#define smac_can_fd_message_init(message, ident, frame_kind, request_kind, data_length,            \
+                                 error_status, switch_bit_rate)                                    \
+    {                                                                                              \
+        message.head.ident           = ident;                                                      \
+        message.head.frame_kind      = frame_kind;                                                 \
+        message.head.request_kind    = request_kind;                                               \
+        message.head.data_length     = data_length;                                                \
+        message.head.format          = SMAC_CAN_FD;                                                \
+        message.head.error_status    = error_status;                                               \
+        message.head.switch_bit_rate = switch_bit_rate;                                            \
+    }
+
+/// @brief Macro to initialize a CAN FD message.
+/// @details This macro sets up the CAN FD message header with the specified identifier, error
+/// status, switch bit rate, and data length.
+/// @param message The CAN FD message structure to initialize.
+/// @param ident The standard identifier for the CAN FD message.
+/// @param frame_kind The frame kind for the CAN FD message.
+/// @param request_kind The request kind for the CAN FD message.
+/// @param data_length The length of the data in the CAN FD message.
+/// @param error_status The error status for the CAN FD message.
+/// @param switch_bit_rate The switch bit rate for the CAN FD message.
+/// @note The message data should be set separately using the smac_can_fd_message_set_data macro.
+#define smac_can_fd_message_init_classic(message, ident, frame_kind, request_kind, data_length,    \
+                                         error_status, switch_bit_rate)                            \
+    {                                                                                              \
+        message.head.ident           = ident;                                                      \
+        message.head.frame_kind      = frame_kind;                                                 \
+        message.head.request_kind    = request_kind;                                               \
+        message.head.data_length     = data_length;                                                \
+        message.head.format          = SMAC_CAN_CLASSIC;                                           \
+        message.head.error_status    = error_status;                                               \
+        message.head.switch_bit_rate = switch_bit_rate;                                            \
+    }
+
+/// @brief Macro to set the data for a CAN FD message.
+/// @details This macro copies the data from the provided array into the CAN FD message's data
+/// field. The number of bytes copied is the lesser of the message's data length and 64.
+/// @param message The CAN FD message structure to set the data for.
+/// @param data_array The array containing the data to copy into the CAN FD message.
+#define smac_can_fd_message_set_data(message, data_array)                                          \
+    {                                                                                              \
+        memcpy((message)->data, data_array,                                                           \
+               (message)->head.data_length > 64 ? 64 : (message)->head.data_length);                     \
+    }
+
 /// @brief Initialize the MCU abstraction layer for SMAC.
-/// @details This function initializes the MCU abstraction layer for the SMAC library, setting up
-/// necessary resources, shall be called before using any other MCU abstraction functions.
+/// @details This function initializes the MCU abstraction layer for the SMAC library, setting
+/// up necessary resources, shall be called before using any other MCU abstraction functions.
 /// @param  None.
 /// @return @ref SMAC_RET_OK if initialization is successful, otherwise an error code.
 smacRetCode_t smac_mcu_initialize(void);
@@ -289,9 +472,22 @@ smacRetCode_t smac_mcu_set_adc_event(smacAdcEventConvertComplete on_convert_comp
                                      smacAdcEventError on_error);
 
 /// @brief Set CAN event callbacks for the MCU abstraction layer.
-/// @param on_rx_complete Callback for reception complete event.
+/// @param on_tx_complete Callback for transmission complete event.
+/// @param on_rx_complete0 Callback for reception complete event for FIFO 0.
+/// @param on_rx_complete1 Callback for reception complete event for FIFO 1.
 /// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_can_event(smacCanEventRxComplete on_rx_complete);
+smacRetCode_t smac_mcu_set_can_event(smacCanEventTxComplete on_tx_complete,
+                                     smacCanEventRxComplete on_rx_complete0,
+                                     smacCanEventRxComplete on_rx_complete1);
+
+/// @brief Set CAN FD event callbacks for the MCU abstraction layer.
+/// @param on_tx_complete Callback for transmission complete event.
+/// @param on_rx_complete0 Callback for reception complete event for FIFO 0.
+/// @param on_rx_complete1 Callback for reception complete event for FIFO 1.
+/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
+smacRetCode_t smac_mcu_set_can_fd_event(smacCanFdEventTxComplete on_tx_complete,
+                                        smacCanFdEventRxComplete on_rx_complete0,
+                                        smacCanFdEventRxComplete on_rx_complete1);
 
 /// @brief Set I2C event callbacks for the MCU abstraction layer.
 /// @param on_master_tx_complete Callback for I2C master transmission complete event.
@@ -390,9 +586,11 @@ void smac_adc_clean_event(smacAdc_t adc);
 /// @details This function performs a conversion on the specified ADC instance with the provided
 /// data.
 /// @param adc The ADC instance.
-/// @param data The data to be converted.
+/// @param data Pointer to the variable where the converted data will be stored.
+/// @param timeout The timeout for the conversion operation. @ref SMAC_MCU_WAIT_NOW for no wait,
+/// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the conversion is successful, otherwise an error code.
-smacRetCode_t smac_adc_convert(smacAdc_t adc, uint32_t data);
+smacRetCode_t smac_adc_convert(smacAdc_t adc, uint32_t* data, uint32_t timeout);
 
 /// @brief Perform an asynchronous conversion on the specified ADC instance.
 /// @details This function initiates an asynchronous conversion on the specified ADC instance.
@@ -428,9 +626,8 @@ smacRetCode_t smac_adc_async_conversion_stop(smacAdc_t adc);
 /// @details This function creates a CAN instance within the MCU abstraction layer, associating it
 /// with the provided handle and FIFO configuration.
 /// @param handle The handle associated with the CAN instance.
-/// @param fifo The FIFO configuration for the CAN instance.
 /// @return The created CAN instance handle.
-smacCan_t smac_can_create(void* handle, uint32_t fifo);
+smacCan_t smac_can_create(void* handle);
 
 /// @brief Drop a CAN instance within the MCU abstraction layer.
 /// @details This function releases the resources associated with the specified CAN instance.
@@ -474,15 +671,25 @@ smacRetCode_t smac_can_deactive(smacCan_t can);
 /// @return @ref SMAC_RET_OK if the transmission is successful, otherwise an error code.
 smacRetCode_t smac_can_transmit(smacCan_t can, const smacCanMessage* message, uint32_t timeout);
 
-/// @brief Receive a message over the specified CAN instance.
-/// @details This function receives a message over the specified CAN instance with the provided
-/// message buffer and timeout.
+/// @brief Receive a message over channel 0 of the specified CAN instance.
+/// @details This function receives a message over channel 0 of the specified CAN instance with the
+/// provided message buffer and timeout.
 /// @param can The CAN instance.
 /// @param message The buffer to store the received message.
 /// @param timeout The timeout for the reception operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
-smacRetCode_t smac_can_receive(smacCan_t can, smacCanMessage* message, uint32_t timeout);
+smacRetCode_t smac_can_receive_channel0(smacCan_t can, smacCanMessage* message, uint32_t timeout);
+
+/// @brief Receive a message over channel 1 of the specified CAN instance.
+/// @details This function receives a message over channel 1 of the specified CAN instance with the
+/// provided message buffer and timeout.
+/// @param can The CAN instance.
+/// @param message The buffer to store the received message.
+/// @param timeout The timeout for the reception operation. @ref SMAC_MCU_WAIT_NOW for no wait,
+/// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
+/// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
+smacRetCode_t smac_can_receive_channel1(smacCan_t can, smacCanMessage* message, uint32_t timeout);
 
 /// @brief Asynchronously transmit a message over the specified CAN instance.
 /// @details This function initiates an asynchronous transmission of the specified message over the
@@ -493,14 +700,124 @@ smacRetCode_t smac_can_receive(smacCan_t can, smacCanMessage* message, uint32_t 
 /// an error code.
 smacRetCode_t smac_can_async_transmit(smacCan_t can, const smacCanMessage* message);
 
-/// @brief Asynchronously receive a message over the specified CAN instance.
-/// @details This function initiates an asynchronous reception of a message over the CAN instance
-/// within the MCU abstraction layer.
+/// @brief Asynchronously receive a message over channel 0 of the specified CAN instance.
+/// @details This function initiates an asynchronous reception of a message over channel 0 of the
+/// CAN instance within the MCU abstraction layer.
 /// @param can The CAN instance.
 /// @param message The buffer to store the received message.
 /// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
 /// error code.
-smacRetCode_t smac_can_async_receive(smacCan_t can, smacCanMessage* message);
+smacRetCode_t smac_can_async_receive_channel0(smacCan_t can, smacCanMessage* message);
+
+/// @brief Asynchronously receive a message over channel 1 of the specified CAN instance.
+/// @details This function initiates an asynchronous reception of a message over channel 1 of the
+/// CAN instance within the MCU abstraction layer.
+/// @param can The CAN instance.
+/// @param message The buffer to store the received message.
+/// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
+/// error code.
+smacRetCode_t smac_can_async_receive_channel1(smacCan_t can, smacCanMessage* message);
+
+/// ============================================================================
+/// @brief CAN FD interface functions for the MCU abstraction layer.
+/// @details These functions provide an interface for creating, dropping, and performing various
+/// operations on CAN instances within the MCU abstraction layer.
+/// ============================================================================
+
+/// @brief Create a CAN FD instance.
+/// @details This function creates a CAN FD instance within the MCU abstraction layer.
+/// @param handle The handle to the underlying CAN FD hardware.
+/// @return The created CAN FD instance.
+smacCanFd_t smac_can_fd_create(void* handle);
+
+/// @brief Drop a CAN FD instance.
+/// @details This function drops the specified CAN FD instance within the MCU abstraction layer.
+/// @param canfd The CAN FD instance to be dropped.
+void smac_can_fd_drop(smacCanFd_t canfd);
+
+/// @brief Set an event for the specified CAN FD instance.
+/// @details This function sets an event for the specified CAN FD instance within the MCU
+/// abstraction layer.
+/// @param canfd The CAN FD instance.
+/// @param data The event data to be set.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+smacRetCode_t smac_can_fd_set_event(smacCanFd_t canfd, smacMcuEventData_t data);
+
+/// @brief Clean the event for the specified CAN FD instance.
+/// @details This function cleans the event for the specified CAN FD instance within the MCU
+/// abstraction layer.
+/// @param canfd The CAN FD instance.
+void smac_can_fd_clean_event(smacCanFd_t canfd);
+
+/// @brief Activate the specified CAN FD instance.
+/// @details This function activates the specified CAN FD instance within the MCU abstraction layer.
+/// @param canfd The CAN FD instance to be activated.
+/// @return @ref SMAC_RET_OK if the activation is successful, otherwise an error code.
+smacRetCode_t smac_can_fd_active(smacCanFd_t canfd);
+
+/// @brief Deactivate the specified CAN FD instance.
+/// @details This function deactivates the specified CAN FD instance within the MCU abstraction
+/// layer.
+/// @param canfd The CAN FD instance to be deactivated.
+/// @return @ref SMAC_RET_OK if the deactivation is successful, otherwise an error code.
+smacRetCode_t smac_can_fd_deactive(smacCanFd_t canfd);
+
+/// @brief Transmit a CAN FD message using the specified CAN FD instance.
+/// @details This function transmits a CAN FD message using the specified CAN FD instance within the
+/// MCU abstraction layer.
+/// @param canfd The CAN FD instance to be used for transmission.
+/// @param message The CAN FD message to be transmitted.
+/// @param timeout The timeout duration for the transmission operation.
+/// @return @ref SMAC_RET_OK if the transmission is successful, otherwise an error code.
+smacRetCode_t smac_can_fd_transmit(smacCanFd_t canfd, const smacCanFdMessage* message,
+                                   uint32_t timeout);
+
+/// @brief Receive a CAN FD message using the specified CAN FD instance.
+/// @details This function receives a CAN FD message using the specified CAN FD instance within the
+/// MCU abstraction layer.
+/// @param canfd The CAN FD instance to be used for reception.
+/// @param message The CAN FD message structure to store the received message.
+/// @param timeout The timeout duration for the reception operation.
+/// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
+smacRetCode_t smac_can_fd_receive_channel0(smacCanFd_t canfd, smacCanFdMessage* message,
+                                           uint32_t timeout);
+
+/// @brief Receive a CAN FD message using the specified CAN FD instance on channel 1.
+/// @details This function receives a CAN FD message using the specified CAN FD instance on channel
+/// 1 within the MCU abstraction layer.
+/// @param canfd The CAN FD instance to be used for reception.
+/// @param message The CAN FD message structure to store the received message.
+/// @param timeout The timeout duration for the reception operation.
+/// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
+smacRetCode_t smac_can_fd_receive_channel1(smacCanFd_t canfd, smacCanFdMessage* message,
+                                           uint32_t timeout);
+
+/// @brief Asynchronously transmit a CAN FD message using the specified CAN FD instance.
+/// @details This function initiates an asynchronous transmission of a CAN FD message using the
+/// specified CAN FD instance within the MCU abstraction layer.
+/// @param canfd The CAN FD instance to be used for transmission.
+/// @param message The CAN FD message to be transmitted.
+/// @return @ref SMAC_RET_OK if the asynchronous transmission is initiated successfully, otherwise
+/// an error code.
+smacRetCode_t smac_can_fd_async_transmit(smacCanFd_t canfd, const smacCanFdMessage* message);
+
+/// @brief Asynchronously receive a CAN FD message using the specified CAN FD instance on channel 0.
+/// @details This function initiates an asynchronous reception of a CAN FD message using the
+/// specified CAN FD instance on channel 0 within the MCU abstraction layer.
+/// @param canfd The CAN FD instance to be used for reception.
+/// @param message The CAN FD message structure to store the received message.
+/// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
+/// error code.
+smacRetCode_t smac_can_fd_async_receive_channel0(smacCanFd_t canfd, smacCanFdMessage* message);
+
+/// @brief Asynchronously receive a CAN FD message using the specified CAN FD instance.
+/// @details This function initiates an asynchronous reception of a CAN FD message using the
+/// specified CAN FD instance within the MCU abstraction layer.
+/// @param canfd The CAN FD instance to be used for reception.
+/// @param message The CAN FD message structure to store the received message.
+/// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
+/// error code.
+smacRetCode_t smac_can_fd_async_receive_channel1(smacCanFd_t canfd, smacCanFdMessage* message);
 
 /// ============================================================================
 /// @brief Internal FLASH interface functions for the MCU abstraction layer.
@@ -508,68 +825,25 @@ smacRetCode_t smac_can_async_receive(smacCan_t can, smacCanMessage* message);
 /// operations on Internal FLASH instances within the MCU abstraction layer.
 /// ============================================================================
 
-/// @brief Create an Internal FLASH instance within the MCU abstraction layer.
-/// @details This function creates an Internal FLASH instance within the MCU abstraction layer,
-/// associating it with the provided handle.
-/// @param handle The handle associated with the Internal FLASH instance.
-/// @return The created Internal FLASH instance handle.
-smacFlash_t smac_flash_create(void* handle);
-
-/// @brief Drop an Internal FLASH instance within the MCU abstraction layer.
-/// @details This function releases the resources associated with the specified Internal FLASH
-/// instance.
-/// @param flash The Internal FLASH instance to be dropped.
-void smac_flash_drop(smacFlash_t flash);
-
 /// @brief Erase the specified Internal FLASH instance.
 /// @details This function erases the contents of the specified Internal FLASH instance.
-/// @param flash The Internal FLASH instance to be erased.
+/// @param bank The bank within the Internal FLASH instance.
+/// @param sector The starting sector within the Internal FLASH instance to be erased.
+/// @param num The number of sectors to be erased.
 /// @return @ref SMAC_RET_OK if the erase operation is successful, otherwise an error code.
-smacRetCode_t smac_flash_erase(smacFlash_t flash);
+smacRetCode_t smac_flash_erase(uint32_t bank, uint32_t sector, uint32_t num);
 
 /// @brief Write 8-bit data to the specified Internal FLASH instance.
 /// @details This function writes the specified 8-bit data to the given address within the Internal
 /// FLASH instance.
-/// @param flash The Internal FLASH instance.
+/// @param bank The bank within the Internal FLASH instance.
 /// @param address The address within the Internal FLASH instance to write to.
+/// @param wide The write width (8-bit, 16-bit, 32-bit, or 64-bit).
 /// @param data The data to be written.
 /// @param size The size of the data to be written.
 /// @return @ref SMAC_RET_OK if the write operation is successful, otherwise an error code.
-smacRetCode_t smac_flash_write8(smacFlash_t flash, uint32_t address, const uint8_t* data,
-                                uint32_t size);
-
-/// @brief Write 16-bit data to the specified Internal FLASH instance.
-/// @details This function writes the specified 16-bit data to the given address within the Internal
-/// FLASH instance.
-/// @param flash The Internal FLASH instance.
-/// @param address The address within the Internal FLASH instance to write to.
-/// @param data The data to be written.
-/// @param size The size of the data to be written.
-/// @return @ref SMAC_RET_OK if the write operation is successful, otherwise an error code.
-smacRetCode_t smac_flash_write16(smacFlash_t flash, uint32_t address, const uint8_t* data,
-                                 uint32_t size);
-
-/// @brief Write 32-bit data to the specified Internal FLASH instance.
-/// @details This function writes the specified 32-bit data to the given address within the Internal
-/// FLASH instance.
-/// @param flash The Internal FLASH instance.
-/// @param address The address within the Internal FLASH instance to write to.
-/// @param data The data to be written.
-/// @param size The size of the data to be written.
-/// @return @ref SMAC_RET_OK if the write operation is successful, otherwise an error code.
-smacRetCode_t smac_flash_write32(smacFlash_t flash, uint32_t address, const uint32_t* data,
-                                 uint32_t size);
-
-/// @brief Write 64-bit data to the specified Internal FLASH instance.
-/// @details This function writes the specified 64-bit data to the given address within the Internal
-/// FLASH instance.
-/// @param flash The Internal FLASH instance.
-/// @param address The address within the Internal FLASH instance to write to.
-/// @param data The data to be written.
-/// @param size The size of the data to be written.
-/// @return @ref SMAC_RET_OK if the write operation is successful, otherwise an error code.
-smacRetCode_t smac_flash_write64(smacFlash_t flash, uint32_t address, const uint64_t* data,
-                                 uint32_t size);
+smacRetCode_t smac_flash_write(uint32_t bank, uint32_t address, smacFlashWriteWide wide,
+                               const uint64_t data, uint32_t size);
 
 /// ============================================================================
 /// @brief I2C interface functions for the MCU abstraction layer.
@@ -601,7 +875,8 @@ smacRetCode_t smac_i2c_master_set_event(smacI2c_t i2c, smacMcuEventData_t data);
 
 /// @brief Clean I2C master event callbacks for the specified I2C master instance.
 /// @param i2c The I2C master instance.
-/// @note This function will remove all event callbacks associated with the specified I2C master instance.
+/// @note This function will remove all event callbacks associated with the specified I2C master
+/// instance.
 void smac_i2c_master_clean_event(smacI2c_t i2c);
 
 /// @brief Check if the I2C master device is in a ready state.
@@ -675,13 +950,16 @@ void smac_i2c_slave_drop(smacI2c_t i2c);
 /// @param i2c The I2C slave instance.
 /// @param data The event data to be associated with the I2C slave instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
-/// @note If you don't want to use the interrupt/event of the I2C slave instance, you could don't call this function.
-/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+/// @note If you don't want to use the interrupt/event of the I2C slave instance, you could don't
+/// call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
 smacRetCode_t smac_i2c_slave_set_event(smacI2c_t i2c, smacMcuEventData_t data);
 
 /// @brief Clean I2C slave event callbacks for the specified I2C slave instance.
 /// @param i2c The I2C slave instance.
-/// @note This function will remove all event callbacks associated with the specified I2C slave instance.
+/// @note This function will remove all event callbacks associated with the specified I2C slave
+/// instance.
 void smac_i2c_slave_clean_event(smacI2c_t i2c);
 
 /// @brief Listen for incoming communication on the specified I2C slave instance.
@@ -757,13 +1035,16 @@ void smac_i2c_mem_drop(smacI2c_t i2c);
 /// @param i2c The I2C memory instance.
 /// @param data The event data to be associated with the I2C memory instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
-/// @note If you don't want to use the interrupt/event of the I2C memory instance, you could don't call this function.
-/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+/// @note If you don't want to use the interrupt/event of the I2C memory instance, you could don't
+/// call this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
 smacRetCode_t smac_i2c_mem_set_event(smacI2c_t i2c, smacMcuEventData_t data);
 
 /// @brief Clean I2C memory event callbacks for the specified I2C memory instance.
 /// @param i2c The I2C memory instance.
-/// @note This function will remove all event callbacks associated with the specified I2C memory instance.
+/// @note This function will remove all event callbacks associated with the specified I2C memory
+/// instance.
 void smac_i2c_mem_clean_event(smacI2c_t i2c);
 
 /// @brief Check if the I2C memory device is in a ready state.
@@ -858,8 +1139,10 @@ void smac_io_drop(smacIo_t io);
 /// @param io The IO instance.
 /// @param data The event data to be associated with the IO instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
-/// @note If you don't want to use the interrupt/event of the IO instance, you could don't call this function.
-/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+/// @note If you don't want to use the interrupt/event of the IO instance, you could don't call this
+/// function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
 smacRetCode_t smac_io_set_event(smacIo_t io, smacMcuEventData_t data);
 
 /// @brief Clean IO event callbacks for the specified IO instance.
@@ -910,8 +1193,10 @@ void smac_pwm_drop(smacPwm_t pwm);
 /// @param pwm The PWM instance.
 /// @param data The event data to be associated with the PWM instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
-/// @note If you don't want to use the interrupt/event of the PWM instance, you could don't call this function.
-/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+/// @note If you don't want to use the interrupt/event of the PWM instance, you could don't call
+/// this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
 smacRetCode_t smac_pwm_set_event(smacPwm_t pwm, smacMcuEventData_t data);
 
 /// @brief Clean PWM event callbacks for the specified PWM instance.
@@ -987,8 +1272,10 @@ void smac_spi_drop(smacSpi_t spi);
 /// @param spi The SPI instance.
 /// @param data The event data to be associated with the SPI instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
-/// @note If you don't want to use the interrupt/event of the SPI instance, you could don't call this function.
-/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+/// @note If you don't want to use the interrupt/event of the SPI instance, you could don't call
+/// this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
 smacRetCode_t smac_spi_set_event(smacSpi_t spi, smacMcuEventData_t data);
 
 /// @brief Clean SPI event callbacks for the specified SPI instance.
@@ -1087,13 +1374,16 @@ void smac_tim_drop(smacTim_t tim);
 /// @param tim The Timer instance.
 /// @param data The event data to be associated with the Timer instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
-/// @note If you don't want to use the interrupt/event of the Timer instance, you could don't call this function.
-/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in MCU driver.
+/// @note If you don't want to use the interrupt/event of the Timer instance, you could don't call
+/// this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
 smacRetCode_t smac_tim_set_event(smacTim_t tim, smacMcuEventData_t data);
 
 /// @brief Clean Timer event callbacks for the specified Timer instance.
 /// @param tim The Timer instance.
-/// @note This function will remove all event callbacks associated with the specified Timer instance.
+/// @note This function will remove all event callbacks associated with the specified Timer
+/// instance.
 void smac_tim_clean_event(smacTim_t tim);
 
 /// @brief Get the current count of the specified Timer instance.
