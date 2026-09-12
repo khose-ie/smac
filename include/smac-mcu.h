@@ -189,7 +189,7 @@ typedef struct
     /// @brief I2C slave event callback for being selected by the master.
     /// @param i2c The I2C instance.
     /// @param event_data The event data associated with the selected event.
-    void (*selected_by_master)(smacI2c_t i2c, smacMcuEventData_t event_data);
+    void (*selected)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
     /// @brief I2C event callback for error.
     /// @param i2c The I2C instance.
@@ -915,59 +915,66 @@ smacRetCode_t smac_i2c_master_set_event(smacI2c_t i2c, smacI2cMasterEvent_t* eve
 /// instance.
 void smac_i2c_master_clean_event(smacI2c_t i2c);
 
-/// @brief Check if the I2C master device is in a ready state.
+/// @brief Checks if the specified I2C slave device is ready for communication.
+/// @details This function checks whether the specified I2C slave device associated with the given
+/// I2C master instance is ready for communication.
 /// @param i2c The I2C master instance.
-/// @return true if the device is ready, otherwise false.
-bool smac_i2c_master_device_in_ready_state(smacI2c_t i2c);
+/// @param slave The address of the I2C slave device.
+/// @param timeout The timeout for checking the device readiness. @ref SMAC_MCU_WAIT_NOW for no
+/// wait,
+/// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
+/// @return @ref SMAC_RET_OK if the device is ready, otherwise an error code.
+smacRetCode_t smac_i2c_master_selected_device_in_ready_state(smacI2c_t i2c, uint16_t slave,
+                                                             uint32_t timeout);
 
 /// @brief Transmit data over the specified I2C master instance.
 /// @details This function transmits the specified data to the given address over the I2C master
 /// instance within the MCU abstraction layer.
 /// @param i2c The I2C master instance.
-/// @param address The address of the I2C slave device.
+/// @param slave The address of the I2C slave device.
 /// @param data The data to be transmitted.
 /// @param size The size of the data to be transmitted.
 /// @param timeout The timeout for the transmission operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the transmission is successful, otherwise an error code.
-smacRetCode_t smac_i2c_master_transmit(smacI2c_t i2c, uint16_t address, const uint8_t* data,
+smacRetCode_t smac_i2c_master_transmit(smacI2c_t i2c, uint16_t slave, const uint8_t* data,
                                        uint32_t size, uint32_t timeout);
 
 /// @brief Receive data over the specified I2C master instance.
 /// @details This function receives data from the given address over the I2C master instance within
 /// the MCU abstraction layer.
 /// @param i2c The I2C master instance.
-/// @param address The address of the I2C slave device.
+/// @param slave The address of the I2C slave device.
 /// @param data The buffer to store the received data.
 /// @param size The size of the data to be received.
 /// @param timeout The timeout for the reception operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
-smacRetCode_t smac_i2c_master_receive(smacI2c_t i2c, uint16_t address, uint8_t* data, uint32_t size,
+smacRetCode_t smac_i2c_master_receive(smacI2c_t i2c, uint16_t slave, uint8_t* data, uint32_t size,
                                       uint32_t timeout);
 
 /// @brief Asynchronously transmit data over the specified I2C master instance.
 /// @details This function initiates an asynchronous transmission of the specified data to the given
 /// address over the I2C master instance within the MCU abstraction layer.
 /// @param i2c The I2C master instance.
-/// @param address The address of the I2C slave device.
+/// @param slave The address of the I2C slave device.
 /// @param data The data to be transmitted.
 /// @param size The size of the data to be transmitted.
 /// @return @ref SMAC_RET_OK if the asynchronous transmission is initiated successfully, otherwise
 /// an error code.
-smacRetCode_t smac_i2c_master_async_transmit(smacI2c_t i2c, uint16_t address, const uint8_t* data,
+smacRetCode_t smac_i2c_master_async_transmit(smacI2c_t i2c, uint16_t slave, const uint8_t* data,
                                              uint32_t size);
 
 /// @brief Asynchronously receive data over the specified I2C master instance.
 /// @details This function initiates an asynchronous reception of data from the given address over
 /// the I2C master instance within the MCU abstraction layer.
 /// @param i2c The I2C master instance.
-/// @param address The address of the I2C slave device.
+/// @param slave The address of the I2C slave device.
 /// @param data The buffer to store the received data.
 /// @param size The size of the data to be received.
 /// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
 /// error code.
-smacRetCode_t smac_i2c_master_async_receive(smacI2c_t i2c, uint16_t address, uint8_t* data,
+smacRetCode_t smac_i2c_master_async_receive(smacI2c_t i2c, uint16_t slave, uint8_t* data,
                                             uint32_t size);
 
 /// @brief Create an I2C slave instance within the MCU abstraction layer.
@@ -1009,54 +1016,47 @@ void smac_i2c_slave_clean_event(smacI2c_t i2c);
 smacRetCode_t smac_i2c_slave_listen(smacI2c_t i2c);
 
 /// @brief Transmit data over the specified I2C slave instance.
-/// @details This function transmits the specified data to the given address over the I2C slave
+/// @details This function transmits the specified data over the I2C slave
 /// instance within the MCU abstraction layer.
 /// @param i2c The I2C slave instance.
-/// @param address The address of the I2C master device.
 /// @param data The data to be transmitted.
 /// @param size The size of the data to be transmitted.
 /// @param timeout The timeout for the transmission operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the transmission is successful, otherwise an error code.
-smacRetCode_t smac_i2c_slave_transmit(smacI2c_t i2c, uint16_t address, const uint8_t* data,
-                                      uint32_t size, uint32_t timeout);
+smacRetCode_t smac_i2c_slave_transmit(smacI2c_t i2c, const uint8_t* data, uint32_t size,
+                                      uint32_t timeout);
 
 /// @brief Receive data over the specified I2C slave instance.
-/// @details This function receives data from the given address over the I2C slave instance within
+/// @details This function receives data over the I2C slave instance within
 /// the MCU abstraction layer.
 /// @param i2c The I2C slave instance.
-/// @param address The address of the I2C master device.
 /// @param data The buffer to store the received data.
 /// @param size The size of the data to be received.
 /// @param timeout The timeout for the reception operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
-smacRetCode_t smac_i2c_slave_receive(smacI2c_t i2c, uint16_t address, uint8_t* data, uint32_t size,
-                                     uint32_t timeout);
+smacRetCode_t smac_i2c_slave_receive(smacI2c_t i2c, uint8_t* data, uint32_t size, uint32_t timeout);
 
 /// @brief Asynchronously transmit data over the specified I2C slave instance.
-/// @details This function initiates an asynchronous transmission of the specified data to the given
-/// address over the I2C slave instance within the MCU abstraction layer.
+/// @details This function initiates an asynchronous transmission of the specified data over the I2C
+/// slave instance within the MCU abstraction layer.
 /// @param i2c The I2C slave instance.
-/// @param address The address of the I2C master device.
 /// @param data The data to be transmitted.
 /// @param size The size of the data to be transmitted.
 /// @return @ref SMAC_RET_OK if the asynchronous transmission is initiated successfully, otherwise
 /// an error code.
-smacRetCode_t smac_i2c_slave_async_transmit(smacI2c_t i2c, uint16_t address, const uint8_t* data,
-                                            uint32_t size);
+smacRetCode_t smac_i2c_slave_async_transmit(smacI2c_t i2c, const uint8_t* data, uint32_t size);
 
 /// @brief Asynchronously receive data over the specified I2C slave instance.
-/// @details This function initiates an asynchronous reception of data from the given address over
-/// the I2C slave instance within the MCU abstraction layer.
+/// @details This function initiates an asynchronous reception of data over the I2C slave instance
+/// within the MCU abstraction layer.
 /// @param i2c The I2C slave instance.
-/// @param address The address of the I2C master device.
 /// @param data The buffer to store the received data.
 /// @param size The size of the data to be received.
 /// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
 /// error code.
-smacRetCode_t smac_i2c_slave_async_receive(smacI2c_t i2c, uint16_t address, uint8_t* data,
-                                           uint32_t size);
+smacRetCode_t smac_i2c_slave_async_receive(smacI2c_t i2c, uint8_t* data, uint32_t size);
 
 /// @brief Create an I2C memory instance within the MCU abstraction layer.
 /// @details This function creates an I2C memory instance within the MCU abstraction layer,
@@ -1093,14 +1093,18 @@ void smac_i2c_mem_clean_event(smacI2c_t i2c);
 /// @details This function checks whether the I2C memory device associated with the specified I2C
 /// instance is ready for communication.
 /// @param i2c The I2C memory instance.
-/// @return true if the device is ready, otherwise false.
-bool smac_i2c_mem_device_in_ready_state(smacI2c_t i2c);
+/// @param address The address of the I2C memory device to check.
+/// @param timeout The timeout for the operation. @ref SMAC_MCU_WAIT_NOW for no wait,
+/// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
+/// @return @ref SMAC_RET_OK if the device is ready, otherwise an error code.
+smacRetCode_t smac_i2c_mem_selected_device_in_ready_state(smacI2c_t i2c, uint16_t address,
+                                                          uint32_t timeout);
 
 /// @brief Write data to the specified I2C memory device.
 /// @details This function writes the specified data to the given memory address of the I2C memory
 /// device associated with the specified I2C instance.
 /// @param i2c The I2C memory instance.
-/// @param slave_addr The address of the I2C memory device.
+/// @param slave The address of the I2C memory device.
 /// @param mem_addr The memory address within the I2C memory device.
 /// @param mem_addr_size The size of the memory address.
 /// @param data The data to be written.
@@ -1108,7 +1112,7 @@ bool smac_i2c_mem_device_in_ready_state(smacI2c_t i2c);
 /// @param timeout The timeout for the write operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the write operation is successful, otherwise an error code.
-smacRetCode_t smac_i2c_mem_write(smacI2c_t i2c, uint16_t slave_addr, uint16_t mem_addr,
+smacRetCode_t smac_i2c_mem_write(smacI2c_t i2c, uint16_t slave, uint16_t mem_addr,
                                  smacI2cMemAddrSize mem_addr_size, const uint8_t* data,
                                  uint16_t size, uint32_t timeout);
 
@@ -1116,7 +1120,7 @@ smacRetCode_t smac_i2c_mem_write(smacI2c_t i2c, uint16_t slave_addr, uint16_t me
 /// @details This function reads data from the given memory address of the I2C memory device
 /// associated with the specified I2C instance.
 /// @param i2c The I2C memory instance.
-/// @param slave_addr The address of the I2C memory device.
+/// @param slave The address of the I2C memory device.
 /// @param mem_addr The memory address within the I2C memory device.
 /// @param mem_addr_size The size of the memory address.
 /// @param data The buffer to store the read data.
@@ -1124,7 +1128,7 @@ smacRetCode_t smac_i2c_mem_write(smacI2c_t i2c, uint16_t slave_addr, uint16_t me
 /// @param timeout The timeout for the read operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the read operation is successful, otherwise an error code.
-smacRetCode_t smac_i2c_mem_read(smacI2c_t i2c, uint16_t slave_addr, uint16_t mem_addr,
+smacRetCode_t smac_i2c_mem_read(smacI2c_t i2c, uint16_t slave, uint16_t mem_addr,
                                 smacI2cMemAddrSize mem_addr_size, uint8_t* data, uint16_t size,
                                 uint32_t timeout);
 
@@ -1132,14 +1136,14 @@ smacRetCode_t smac_i2c_mem_read(smacI2c_t i2c, uint16_t slave_addr, uint16_t mem
 /// @details This function initiates an asynchronous write of the specified data to the given memory
 /// address of the I2C memory device associated with the specified I2C instance.
 /// @param i2c The I2C memory instance.
-/// @param slave_addr The address of the I2C memory device.
+/// @param slave The address of the I2C memory device.
 /// @param mem_addr The memory address within the I2C memory device.
 /// @param mem_addr_size The size of the memory address.
 /// @param data The data to be written.
 /// @param size The size of the data to be written.
 /// @return @ref SMAC_RET_OK if the asynchronous write is initiated successfully, otherwise an error
 /// code.
-smacRetCode_t smac_i2c_mem_async_write(smacI2c_t i2c, uint16_t slave_addr, uint16_t mem_addr,
+smacRetCode_t smac_i2c_mem_async_write(smacI2c_t i2c, uint16_t slave, uint16_t mem_addr,
                                        smacI2cMemAddrSize mem_addr_size, const uint8_t* data,
                                        uint16_t size);
 
@@ -1147,14 +1151,14 @@ smacRetCode_t smac_i2c_mem_async_write(smacI2c_t i2c, uint16_t slave_addr, uint1
 /// @details This function initiates an asynchronous read of data from the given memory address of
 /// the I2C memory device associated with the specified I2C instance.
 /// @param i2c The I2C memory instance.
-/// @param slave_addr The address of the I2C memory device.
+/// @param slave The address of the I2C memory device.
 /// @param mem_addr The memory address within the I2C memory device.
 /// @param mem_addr_size The size of the memory address.
 /// @param data The buffer to store the read data.
 /// @param size The size of the data to be read.
 /// @return @ref SMAC_RET_OK if the asynchronous read is initiated successfully, otherwise an error
 /// code.
-smacRetCode_t smac_i2c_mem_async_read(smacI2c_t i2c, uint16_t slave_addr, uint16_t mem_addr,
+smacRetCode_t smac_i2c_mem_async_read(smacI2c_t i2c, uint16_t slave, uint16_t mem_addr,
                                       smacI2cMemAddrSize mem_addr_size, uint8_t* data,
                                       uint16_t size);
 

@@ -54,6 +54,9 @@ typedef enum
     SMAC_RET_MCU_CLOCK_FAILURE = 0x0401, ///< MCU clock or timing error
     SMAC_RET_MCU_RESET         = 0x0402, ///< Unexpected MCU reset
 
+    SMAC_RET_MCU_I2C_BUSY       = 0x0403, ///< I2C bus is busy
+    SMAC_RET_MCU_I2C_FAULT      = 0x0404, ///< I2C bus is dead and cannot be covered or re-initialized.
+
     //===============================
     //  OS specific errors 0x05
     //===============================
