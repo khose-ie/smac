@@ -7,19 +7,6 @@
 /// interfaces for UART operations and event handling.
 /// @author Khose-ie<khose-ie@outlook.com>
 /// @date 2024-08-09
-/// @note Callback Design for Rust FFI Support
-/// All event callbacks (e.g., @ref smac_mcu_set_uart_event) are registered globally for the entire
-/// driver instance set. Per-instance context is supplied via the @c event_data parameter in
-/// functions like @ref smac_uart_open_event.
-///
-/// This design intentionally separates the dispatcher (the global callback function) from the
-/// instance-specific state to accommodate Rust FFI. In Rust, a trait object (`&dyn Trait`) is a
-/// "fat pointer" consisting of a data pointer and a vtable pointer, which cannot be stored directly
-/// in a C `void*` (a single machine word). Instead, the Rust side splits the fat pointer into a
-/// thin context structure (data + vtable) and passes its pointer as @c event_data. The global
-/// callback then forwards this pointer back to Rust, where it is reassembled into the original
-/// trait object, enabling per-instance method dispatch without requiring per-instance callback
-/// registration in C.
 ///
 /// This approach is efficient, type-safe, and follows the standard FFI pattern for dynamic dispatch
 /// across language boundaries.
@@ -35,6 +22,13 @@ extern "C" {
 /// @brief Special timeout values for MCU operations.
 #define SMAC_MCU_WAIT_NOW     (0x00000000)
 #define SMAC_MCU_WAIT_FOREVER (0xFFFFFFFF)
+
+/// ============================================================================
+/// @defgroup smac_peripheral_handles SMAC Peripheral Device Handles
+/// @brief Handle types for various SMAC peripheral devices.
+/// @details This group contains the handle types for different SMAC peripheral devices.
+/// @{
+/// ============================================================================
 
 /// @brief MCU event data type.
 /// @details This type represents the event data associated with MCU events.
@@ -84,159 +78,247 @@ typedef void* smacUart_t;
 /// @details This type represents the handle associated with a Watchdog instance.
 typedef void* smacWdt_t;
 
-/// @brief ADC event callback for conversion complete.
-/// @param adc The ADC instance.
-/// @param event_data The event data associated with the conversion complete event.
-/// @param value The converted ADC value.
-typedef void (*smacAdcEventConvertComplete)(smacAdc_t adc, smacMcuEventData_t event_data,
-                                            uint32_t value);
+/// @}
 
-/// @brief ADC event callback for over-threshold condition.
-/// @param adc The ADC instance.
-/// @param event_data The event data associated with the over-threshold event.
-typedef void (*smacAdcEventOverThreshold)(smacAdc_t adc, smacMcuEventData_t event_data);
+/// ============================================================================
+/// @defgroup smac_peripheral_callbacks SMAC Peripheral Device Callbacks
+/// @brief Callback structures for various SMAC peripheral device events.
+/// @details This group contains the structures defining the callback functions for different SMAC
+/// peripheral device events.
+/// @{
+/// ============================================================================
 
-/// @brief ADC event callback for error.
-/// @param adc The ADC instance.
-/// @param event_data The event data associated with the error event.
-/// @param error_code The error code associated with the error event.
-typedef void (*smacAdcEventError)(smacAdc_t adc, smacMcuEventData_t event_data,
-                                  uint32_t error_code);
+/// @brief Structure containing ADC event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various ADC events, such as conversion complete, over-threshold condition, and error.
+typedef struct
+{
+    /// @brief ADC event callback for conversion complete.
+    /// @param adc The ADC instance.
+    /// @param event_data The event data associated with the conversion complete event.
+    /// @param value The converted ADC value.
+    void (*convert_complete)(smacAdc_t adc, smacMcuEventData_t event_data, uint32_t value);
 
-/// @brief CAN event callback for transmission complete.
-/// @param can The CAN instance.
-/// @param event_data The event data associated with the transmission complete event.
-typedef void (*smacCanEventTxComplete)(smacCan_t can, smacMcuEventData_t event_data);
+    /// @brief ADC event callback for over-threshold condition.
+    /// @param adc The ADC instance.
+    /// @param event_data The event data associated with the over-threshold event.
+    void (*over_threshold)(smacAdc_t adc, smacMcuEventData_t event_data);
 
-/// @brief CAN event callback for reception complete.
-/// @param can The CAN instance.
-/// @param event_data The event data associated with the reception complete event.
-typedef void (*smacCanEventRxComplete)(smacCan_t can, smacMcuEventData_t event_data);
+    /// @brief ADC event callback for error.
+    /// @param adc The ADC instance.
+    /// @param event_data The event data associated with the error event.
+    /// @param error_code The error code associated with the error event.
+    void (*error)(smacAdc_t adc, smacMcuEventData_t event_data, uint32_t error_code);
+} smacAdcEvent_t;
 
-/// @brief CAN FD event callback for transmission complete.
-/// @param canfd The CAN FD instance.
-/// @param event_data The event data associated with the transmission complete event.
-typedef void (*smacCanFdEventTxComplete)(smacCanFd_t canfd, smacMcuEventData_t event_data);
+/// @brief Structure containing CAN event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various CAN events, such as transmission complete and reception complete.
+typedef struct
+{
+    /// @brief CAN event callback for transmission complete.
+    /// @param can The CAN instance.
+    /// @param event_data The event data associated with the transmission complete event.
+    void (*tx_complete)(smacCan_t can, smacMcuEventData_t event_data);
 
-/// @brief CAN FD event callback for reception complete.
-/// @param canfd The CAN FD instance.
-/// @param event_data The event data associated with the reception complete event.
-typedef void (*smacCanFdEventRxComplete)(smacCanFd_t canfd, smacMcuEventData_t event_data);
+    /// @brief CAN event callback for reception complete.
+    /// @param can The CAN instance.
+    /// @param event_data The event data associated with the reception complete event.
+    void (*rx_complete)(smacCan_t can, smacMcuEventData_t event_data);
+    // void (*message_received)(smacCan_t can, smacMcuEventData_t event_data);
+} smacCanEvent_t;
 
-/// @brief I2C master event callback for transmission complete.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the transmission complete event.
-typedef void (*smacI2cMasterEventTxComplete)(smacI2c_t i2c, smacMcuEventData_t event_data);
+/// @brief Structure containing CAN FD event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various CAN FD events, such as transmission complete and reception complete.
+typedef struct
+{
+    /// @brief CAN FD event callback for transmission complete.
+    /// @param canfd The CAN FD instance.
+    /// @param event_data The event data associated with the transmission complete event.
+    void (*tx_complete)(smacCanFd_t canfd, smacMcuEventData_t event_data);
 
-/// @brief I2C master event callback for reception complete.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the reception complete event.
-typedef void (*smacI2cMasterEventRxComplete)(smacI2c_t i2c, smacMcuEventData_t event_data);
+    /// @brief CAN FD event callback for reception complete.
+    /// @param canfd The CAN FD instance.
+    /// @param event_data The event data associated with the reception complete event.
+    void (*rx_complete)(smacCanFd_t canfd, smacMcuEventData_t event_data);
+} smacCanFdEvent_t;
 
-/// @brief I2C slave event callback for transmission complete.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the transmission complete event.
-typedef void (*smacI2cSlaveEventTxComplete)(smacI2c_t i2c, smacMcuEventData_t event_data);
+/// @brief Structure containing I2C master event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various I2C master events, such as transmission complete and reception complete.
+typedef struct
+{
+    /// @brief I2C master event callback for transmission complete.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the transmission complete event.
+    void (*tx_complete)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief I2C slave event callback for reception complete.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the reception complete event.
-typedef void (*smacI2cSlaveEventRxComplete)(smacI2c_t i2c, smacMcuEventData_t event_data);
+    /// @brief I2C master event callback for reception complete.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the reception complete event.
+    void (*rx_complete)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief I2C slave event callback for listen complete.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the listen complete event.
-typedef void (*smacI2cSlaveEventListenComplete)(smacI2c_t i2c, smacMcuEventData_t event_data);
+    /// @brief I2C event callback for error.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the error event.
+    void (*error)(smacI2c_t i2c, smacMcuEventData_t event_data);
+} smacI2cMasterEvent_t;
 
-/// @brief I2C slave event callback for being selected by the master.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the selected event.
-typedef void (*smacI2cSlaveEventSelected)(smacI2c_t i2c, smacMcuEventData_t event_data);
+/// @brief Structure containing I2C slave event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various I2C slave events, such as transmission complete, reception complete, listen complete,
+/// and being selected by the master.
+typedef struct
+{
+    /// @brief I2C slave event callback for transmission complete.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the transmission complete event.
+    void (*tx_complete)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief I2C event callback for memory write complete.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the memory write complete event.
-typedef void (*smacI2cEventMemWriteComplete)(smacI2c_t i2c, smacMcuEventData_t event_data);
+    /// @brief I2C slave event callback for reception complete.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the reception complete event.
+    void (*rx_complete)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief I2C event callback for memory read complete.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the memory read complete event.
-typedef void (*smacI2cEventMemReadComplete)(smacI2c_t i2c, smacMcuEventData_t event_data);
+    /// @brief I2C slave event callback for listen complete.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the listen complete event.
+    void (*listen_complete)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief I2C event callback for error.
-/// @param i2c The I2C instance.
-/// @param event_data The event data associated with the error event.
-typedef void (*smacI2cEventError)(smacI2c_t i2c, smacMcuEventData_t event_data);
+    /// @brief I2C slave event callback for being selected by the master.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the selected event.
+    void (*selected_by_master)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief IO event callback for state change.
-/// @param io The IO instance.
-/// @param event_data The event data associated with the state change event.
-typedef void (*smacIoEventStateChange)(smacIo_t io, smacMcuEventData_t event_data);
+    /// @brief I2C event callback for error.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the error event.
+    void (*error)(smacI2c_t i2c, smacMcuEventData_t event_data);
+} smacI2cSlaveEvent_t;
 
-/// @brief PWM event callback for pulse completion.
-/// @param pwm The PWM instance.
-/// @param event_data The event data associated with the completion event.
-typedef void (*smacPwmEventPulseComplete)(smacPwm_t pwm, smacMcuEventData_t event_data);
+/// @brief Structure containing I2C memory event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various I2C memory events, such as memory write complete, memory read complete, and error.
+typedef struct
+{
+    /// @brief I2C event callback for memory write complete.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the memory write complete event.
+    void (*write_complete)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief SPI event callback for transmission complete.
-/// @param spi The SPI instance.
-/// @param event_data The event data associated with the transmission complete event.
-typedef void (*smacSpiEventTxComplete)(smacSpi_t spi, smacMcuEventData_t event_data);
+    /// @brief I2C event callback for memory read complete.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the memory read complete event.
+    void (*read_complete)(smacI2c_t i2c, smacMcuEventData_t event_data);
 
-/// @brief SPI event callback for reception complete.
-/// @param spi The SPI instance.
-/// @param event_data The event data associated with the reception complete event.
-typedef void (*smacSpiEventRxComplete)(smacSpi_t spi, smacMcuEventData_t event_data);
+    /// @brief I2C event callback for error.
+    /// @param i2c The I2C instance.
+    /// @param event_data The event data associated with the error event.
+    void (*error)(smacI2c_t i2c, smacMcuEventData_t event_data);
+} smacI2cMemEvent_t;
 
-/// @brief SPI event callback for simultaneous transmission and reception complete.
-/// @param spi The SPI instance.
-/// @param event_data The event data associated with the transmission and reception complete event.
-typedef void (*smacSpiEventTxRxComplete)(smacSpi_t spi, smacMcuEventData_t event_data);
+/// @brief Structure containing IO event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various IO events, such as state change.
+typedef struct
+{
+    /// @brief IO event callback for state change.
+    /// @param io The IO instance.
+    /// @param event_data The event data associated with the state change event.
+    void (*state_change)(smacIo_t io, smacMcuEventData_t event_data);
+} smacIoEvent_t;
 
-/// @brief SPI event callback for abort.
-/// @param spi The SPI instance.
-/// @param event_data The event data associated with the abort event.
-typedef void (*smacSpiEventAbort)(smacSpi_t spi, smacMcuEventData_t event_data);
+/// @brief Structure containing PWM event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various PWM events, such as pulse completion.
+typedef struct
+{
+    /// @brief PWM event callback for pulse completion.
+    /// @param pwm The PWM instance.
+    /// @param event_data The event data associated with the completion event.
+    void (*pulse_complete)(smacPwm_t pwm, smacMcuEventData_t event_data);
+} smacPwmEvent_t;
 
-/// @brief SPI event callback for error.
-/// @param spi The SPI instance.
-/// @param event_data The event data associated with the error event.
-typedef void (*smacSpiEventError)(smacSpi_t spi, smacMcuEventData_t event_data);
+/// @brief Structure containing SPI event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various SPI events, such as transmission complete, reception complete, simultaneous
+/// transmission and reception complete, abort sync completion, and error.
+typedef struct
+{
+    /// @brief SPI event callback for transmission complete.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the transmission complete event.
+    void (*tx_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
 
-/// @brief Timer event callback for timeout.
-/// @param tim The Timer instance.
-/// @param event_data The event data associated with the timeout event.
-typedef void (*smacTimEventTimeout)(smacTim_t tim, smacMcuEventData_t event_data);
+    /// @brief SPI event callback for reception complete.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the reception complete event.
+    void (*rx_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
 
-/// @brief UART event callback for transmission complete.
-/// @param uart The UART instance.
-/// @param event_data The event data associated with the transmission complete event.
-typedef void (*smacUartEventTxComplete)(smacUart_t uart, smacMcuEventData_t event_data);
+    /// @brief SPI event callback for simultaneous transmission and reception complete.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the transmission and reception complete
+    /// event.
+    void (*tx_rx_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
 
-/// @brief UART event callback for reception complete.
-/// @param uart The UART instance.
-/// @param event_data The event data associated with the reception complete event.
-/// @param length The length of the received data.
-typedef void (*smacUartEventRxComplete)(smacUart_t uart, smacMcuEventData_t event_data,
-                                        uint32_t length);
+    /// @brief SPI event callback for abort sync completion.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the abort event.
+    void (*abort_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
 
-/// @brief UART event callback for reception of a specific size complete.
-/// @param uart The UART instance.
-/// @param event_data The event data associated with the reception of a specific size complete
-/// event.
-typedef void (*smacUartEventRxSizeComplete)(smacUart_t uart, smacMcuEventData_t event_data);
+    /// @brief SPI event callback for error.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the error event.
+    void (*error)(smacSpi_t spi, smacMcuEventData_t event_data);
+} smacSpiEvent_t;
 
-/// @brief UART event callback for abort.
-/// @param uart The UART instance.
-/// @param event_data The event data associated with the abort event.
-typedef void (*smacUartEventAbort)(smacUart_t uart, smacMcuEventData_t event_data);
+/// @brief Structure containing Timer event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various Timer events, such as timeout.
+typedef struct
+{
+    /// @brief Timer event callback for timeout.
+    /// @param tim The Timer instance.
+    /// @param event_data The event data associated with the timeout event.
+    void (*timeout)(smacTim_t tim, smacMcuEventData_t event_data);
+} smacTimEvent_t;
 
-/// @brief UART event callback for error.
-/// @param uart The UART instance.
-/// @param event_data The event data associated with the error event.
-/// @param error_code The error code associated with the error event.
-typedef void (*smacUartEventError)(smacUart_t uart, smacMcuEventData_t event_data,
-                                   uint32_t error_code);
+/// @brief Structure containing UART event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various UART events, such as transmission complete, reception complete, abort, and error.
+typedef struct
+{
+    /// @brief UART event callback for transmission complete.
+    /// @param uart The UART instance.
+    /// @param event_data The event data associated with the transmission complete event.
+    void (*tx_complete)(smacUart_t uart, smacMcuEventData_t event_data);
+
+    /// @brief UART event callback for reception complete.
+    /// @param uart The UART instance.
+    /// @param event_data The event data associated with the reception complete event.
+    /// @param length The length of the received data.
+    void (*rx_complete)(smacUart_t uart, smacMcuEventData_t event_data, uint32_t length);
+
+    /// @brief UART event callback for reception of a specific size complete.
+    /// @param uart The UART instance.
+    /// @param event_data The event data associated with the reception of a specific size complete
+    /// event.
+    void (*rx_size_complete)(smacUart_t uart, smacMcuEventData_t event_data);
+
+    /// @brief UART event callback for abort.
+    /// @param uart The UART instance.
+    /// @param event_data The event data associated with the abort event.
+    void (*abort_complete)(smacUart_t uart, smacMcuEventData_t event_data);
+
+    /// @brief UART event callback for error.
+    /// @param uart The UART instance.
+    /// @param event_data The event data associated with the error event.
+    /// @param error_code The error code associated with the error event.
+    void (*error)(smacUart_t uart, smacMcuEventData_t event_data, uint32_t error_code);
+} smacUartEvent_t;
+
+/// @}
 
 /// @brief CAN bit rate switch type.
 /// @details This type defines whether the CAN FD message should use a bit rate switch.
@@ -394,8 +476,8 @@ typedef enum
 /// @param data_array The array containing the data to copy into the CAN message.
 #define smac_can_message_set_data(message, data_array)                                             \
     {                                                                                              \
-        memcpy((message)->data, data_array,                                                           \
-               (message)->head.data_length > 8 ? 8 : (message)->head.data_length);                       \
+        memcpy((message)->data, data_array,                                                        \
+               (message)->head.data_length > 8 ? 8 : (message)->head.data_length);                 \
     }
 
 /// @brief Macro to initialize a CAN FD message.
@@ -451,9 +533,17 @@ typedef enum
 /// @param data_array The array containing the data to copy into the CAN FD message.
 #define smac_can_fd_message_set_data(message, data_array)                                          \
     {                                                                                              \
-        memcpy((message)->data, data_array,                                                           \
-               (message)->head.data_length > 64 ? 64 : (message)->head.data_length);                     \
+        memcpy((message)->data, data_array,                                                        \
+               (message)->head.data_length > 64 ? 64 : (message)->head.data_length);               \
     }
+
+/// ============================================================================
+/// @defgroup smac_mcu_interface MCU Abstraction Layer Interface
+/// @brief Functions for interacting with the MCU abstraction layer in the SMAC library.
+/// @details This group contains functions for initializing the MCU abstraction layer and setting up
+/// event callbacks for various peripherals.
+/// @{
+/// ============================================================================
 
 /// @brief Initialize the MCU abstraction layer for SMAC.
 /// @details This function initializes the MCU abstraction layer for the SMAC library, setting
@@ -462,97 +552,14 @@ typedef enum
 /// @return @ref SMAC_RET_OK if initialization is successful, otherwise an error code.
 smacRetCode_t smac_mcu_initialize(void);
 
-/// @brief Set ADC event callbacks for the MCU abstraction layer.
-/// @param on_convert_complete Callback for conversion complete event.
-/// @param on_over_threshold Callback for over-threshold event.
-/// @param on_error Callback for error event.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_adc_event(smacAdcEventConvertComplete on_convert_complete,
-                                     smacAdcEventOverThreshold on_over_threshold,
-                                     smacAdcEventError on_error);
-
-/// @brief Set CAN event callbacks for the MCU abstraction layer.
-/// @param on_tx_complete Callback for transmission complete event.
-/// @param on_rx_complete0 Callback for reception complete event for FIFO 0.
-/// @param on_rx_complete1 Callback for reception complete event for FIFO 1.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_can_event(smacCanEventTxComplete on_tx_complete,
-                                     smacCanEventRxComplete on_rx_complete0,
-                                     smacCanEventRxComplete on_rx_complete1);
-
-/// @brief Set CAN FD event callbacks for the MCU abstraction layer.
-/// @param on_tx_complete Callback for transmission complete event.
-/// @param on_rx_complete0 Callback for reception complete event for FIFO 0.
-/// @param on_rx_complete1 Callback for reception complete event for FIFO 1.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_can_fd_event(smacCanFdEventTxComplete on_tx_complete,
-                                        smacCanFdEventRxComplete on_rx_complete0,
-                                        smacCanFdEventRxComplete on_rx_complete1);
-
-/// @brief Set I2C event callbacks for the MCU abstraction layer.
-/// @param on_master_tx_complete Callback for I2C master transmission complete event.
-/// @param on_master_rx_complete Callback for I2C master reception complete event.
-/// @param on_slave_tx_complete Callback for I2C slave transmission complete event.
-/// @param on_slave_rx_complete Callback for I2C slave reception complete event.
-/// @param on_slave_listen_complete Callback for I2C slave listen complete event.
-/// @param on_slave_selected Callback for I2C slave selected event.
-/// @param on_mem_write_complete Callback for I2C memory write complete event.
-/// @param on_mem_read_complete Callback for I2C memory read complete event.
-/// @param on_error Callback for I2C error event.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_i2c_event(smacI2cMasterEventTxComplete on_master_tx_complete,
-                                     smacI2cMasterEventRxComplete on_master_rx_complete,
-                                     smacI2cSlaveEventTxComplete on_slave_tx_complete,
-                                     smacI2cSlaveEventRxComplete on_slave_rx_complete,
-                                     smacI2cSlaveEventListenComplete on_slave_listen_complete,
-                                     smacI2cSlaveEventSelected on_slave_selected,
-                                     smacI2cEventMemWriteComplete on_mem_write_complete,
-                                     smacI2cEventMemReadComplete on_mem_read_complete,
-                                     smacI2cEventError on_error);
-
-/// @brief Set IO event callbacks for the MCU abstraction layer.
-/// @param on_state_change Callback for state change event.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_io_event(smacIoEventStateChange on_state_change);
-
-/// @brief Set PWM event callbacks for the MCU abstraction layer.
-/// @param on_pulse_complete Callback for pulse completion event.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_pwm_event(smacPwmEventPulseComplete on_pulse_complete);
-
-/// @brief Set SPI event callbacks for the MCU abstraction layer.
-/// @param on_tx_complete Callback for transmission complete event.
-/// @param on_rx_complete Callback for reception complete event.
-/// @param on_tx_rx_complete Callback for simultaneous transmission and reception complete event.
-/// @param on_abort Callback for abort event.
-/// @param on_error Callback for error event.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_spi_event(smacSpiEventTxComplete on_tx_complete,
-                                     smacSpiEventRxComplete on_rx_complete,
-                                     smacSpiEventTxRxComplete on_tx_rx_complete,
-                                     smacSpiEventAbort on_abort, smacSpiEventError on_error);
-
-/// @brief Set Timer event callbacks for the MCU abstraction layer.
-/// @param on_timeout Callback for timeout event.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_tim_event(smacTimEventTimeout on_timeout);
-
-/// @brief Set UART event callbacks for the MCU abstraction layer.
-/// @param on_tx_complete Callback for transmission complete event.
-/// @param on_rx_complete Callback for reception complete event.
-/// @param on_rx_size_complete Callback for reception of a specific size complete event.
-/// @param on_abort Callback for abort event.
-/// @param on_error Callback for error event.
-/// @return @ref SMAC_RET_OK if the callbacks are set successfully, otherwise an error code.
-smacRetCode_t smac_mcu_set_uart_event(smacUartEventTxComplete on_tx_complete,
-                                      smacUartEventRxComplete on_rx_complete,
-                                      smacUartEventRxSizeComplete on_rx_size_complete,
-                                      smacUartEventAbort on_abort, smacUartEventError on_error);
+/// @}
 
 /// ============================================================================
-/// @brief ADC interface functions for the MCU abstraction layer.
-/// @details These functions provide an interface for creating, dropping, and performing various
-/// operations on ADC instances within the MCU abstraction layer.
+/// @defgroup smac_mcu_adc ADC Interface
+/// @brief Functions for interacting with the ADC peripheral in the MCU abstraction layer.
+/// @details This group contains functions for creating, dropping, and performing various operations
+/// on ADC instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create an ADC instance within the MCU abstraction layer.
@@ -569,13 +576,15 @@ void smac_adc_drop(smacAdc_t adc);
 
 /// @brief Set ADC event callbacks for the specified ADC instance.
 /// @param adc The ADC instance.
+/// @param event The ADC event to be associated with the ADC instance. This should be a static
+/// pointer due to SMAC will not copy it.
 /// @param data The event data to be associated with the ADC instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the ADC instance, you could don't call
 /// this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_adc_set_event(smacAdc_t adc, smacMcuEventData_t data);
+smacRetCode_t smac_adc_set_event(smacAdc_t adc, smacAdcEvent_t* event, smacMcuEventData_t data);
 
 /// @brief Clean ADC event callbacks for the specified ADC instance.
 /// @param adc The ADC instance.
@@ -616,10 +625,14 @@ smacRetCode_t smac_adc_async_conversion_start(smacAdc_t adc, uint32_t* data, uin
 /// error code.
 smacRetCode_t smac_adc_async_conversion_stop(smacAdc_t adc);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_mcu_can CAN Interface
 /// @brief CAN interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on CAN instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create a CAN instance within the MCU abstraction layer.
@@ -636,13 +649,15 @@ void smac_can_drop(smacCan_t can);
 
 /// @brief Set CAN event callbacks for the specified CAN instance.
 /// @param can The CAN instance.
+/// @param event The specific CAN event to set the callback for. This should be a static pointer due
+/// to SMAC will not copy it.
 /// @param data The event data to be associated with the CAN instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the CAN instance, you could don't call
 /// this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_can_set_event(smacCan_t can, smacMcuEventData_t data);
+smacRetCode_t smac_can_set_event(smacCan_t can, smacCanEvent_t* event, smacMcuEventData_t data);
 
 /// @brief Clean CAN event callbacks for the specified CAN instance.
 /// @param can The CAN instance.
@@ -718,10 +733,14 @@ smacRetCode_t smac_can_async_receive_channel0(smacCan_t can, smacCanMessage* mes
 /// error code.
 smacRetCode_t smac_can_async_receive_channel1(smacCan_t can, smacCanMessage* message);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_mcu_can_fd CAN FD Interface
 /// @brief CAN FD interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
-/// operations on CAN instances within the MCU abstraction layer.
+/// operations on CAN FD instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create a CAN FD instance.
@@ -739,9 +758,12 @@ void smac_can_fd_drop(smacCanFd_t canfd);
 /// @details This function sets an event for the specified CAN FD instance within the MCU
 /// abstraction layer.
 /// @param canfd The CAN FD instance.
+/// @param event The specific CAN FD event to set the callback for. This should be a static pointer
+/// due to SMAC will not copy it.
 /// @param data The event data to be set.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
-smacRetCode_t smac_can_fd_set_event(smacCanFd_t canfd, smacMcuEventData_t data);
+smacRetCode_t smac_can_fd_set_event(smacCanFd_t canfd, smacCanFdEvent_t* event,
+                                    smacMcuEventData_t data);
 
 /// @brief Clean the event for the specified CAN FD instance.
 /// @details This function cleans the event for the specified CAN FD instance within the MCU
@@ -819,10 +841,14 @@ smacRetCode_t smac_can_fd_async_receive_channel0(smacCanFd_t canfd, smacCanFdMes
 /// error code.
 smacRetCode_t smac_can_fd_async_receive_channel1(smacCanFd_t canfd, smacCanFdMessage* message);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_mcu_flash Internal FLASH Interface
 /// @brief Internal FLASH interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on Internal FLASH instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Erase the specified Internal FLASH instance.
@@ -845,10 +871,14 @@ smacRetCode_t smac_flash_erase(uint32_t bank, uint32_t sector, uint32_t num);
 smacRetCode_t smac_flash_write(uint32_t bank, uint32_t address, smacFlashWriteWide wide,
                                const uint64_t data, uint32_t size);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_mcu_i2c I2C Interface
 /// @brief I2C interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on I2C instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create an I2C master instance within the MCU abstraction layer.
@@ -865,13 +895,16 @@ void smac_i2c_master_drop(smacI2c_t i2c);
 
 /// @brief Set I2C master event callbacks for the specified I2C master instance.
 /// @param i2c The I2C master instance.
+/// @param event The specific I2C master event to set the callback for. This should be a static
+/// pointer due to SMAC will not copy it.
 /// @param data The event data to be associated with the I2C master instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the I2C master instance, you could don't
 /// call this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_i2c_master_set_event(smacI2c_t i2c, smacMcuEventData_t data);
+smacRetCode_t smac_i2c_master_set_event(smacI2c_t i2c, smacI2cMasterEvent_t* event,
+                                        smacMcuEventData_t data);
 
 /// @brief Clean I2C master event callbacks for the specified I2C master instance.
 /// @param i2c The I2C master instance.
@@ -948,13 +981,16 @@ void smac_i2c_slave_drop(smacI2c_t i2c);
 
 /// @brief Set I2C slave event callbacks for the specified I2C slave instance.
 /// @param i2c The I2C slave instance.
+/// @param event The specific I2C slave event to set the callback for. This should be a static
+/// pointer due to SMAC will not copy it.
 /// @param data The event data to be associated with the I2C slave instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the I2C slave instance, you could don't
 /// call this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_i2c_slave_set_event(smacI2c_t i2c, smacMcuEventData_t data);
+smacRetCode_t smac_i2c_slave_set_event(smacI2c_t i2c, smacI2cSlaveEvent_t* event,
+                                       smacMcuEventData_t data);
 
 /// @brief Clean I2C slave event callbacks for the specified I2C slave instance.
 /// @param i2c The I2C slave instance.
@@ -1033,13 +1069,16 @@ void smac_i2c_mem_drop(smacI2c_t i2c);
 
 /// @brief Set I2C memory event callbacks for the specified I2C memory instance.
 /// @param i2c The I2C memory instance.
+/// @param event The specific I2C memory event to set the callback for. This should be a static
+/// pointer due to SMAC will not copy it.
 /// @param data The event data to be associated with the I2C memory instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the I2C memory instance, you could don't
 /// call this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_i2c_mem_set_event(smacI2c_t i2c, smacMcuEventData_t data);
+smacRetCode_t smac_i2c_mem_set_event(smacI2c_t i2c, smacI2cMemEvent_t* event,
+                                     smacMcuEventData_t data);
 
 /// @brief Clean I2C memory event callbacks for the specified I2C memory instance.
 /// @param i2c The I2C memory instance.
@@ -1116,10 +1155,14 @@ smacRetCode_t smac_i2c_mem_async_read(smacI2c_t i2c, uint16_t slave_addr, uint16
                                       smacI2cMemAddrSize mem_addr_size, uint8_t* data,
                                       uint16_t size);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_io IO Interface
 /// @brief IO interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on IO instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create an IO instance within the MCU abstraction layer.
@@ -1137,13 +1180,15 @@ void smac_io_drop(smacIo_t io);
 
 /// @brief Set IO event callbacks for the specified IO instance.
 /// @param io The IO instance.
+/// @param event The specific IO event to set the callback for. This should be a static pointer due
+/// to SMAC will not copy it.
 /// @param data The event data to be associated with the IO instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the IO instance, you could don't call this
 /// function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_io_set_event(smacIo_t io, smacMcuEventData_t data);
+smacRetCode_t smac_io_set_event(smacIo_t io, smacIoEvent_t* event, smacMcuEventData_t data);
 
 /// @brief Clean IO event callbacks for the specified IO instance.
 /// @param io The IO instance.
@@ -1170,10 +1215,14 @@ smacRetCode_t smac_io_set_state(smacIo_t io, smacIoState state);
 /// @return @ref SMAC_RET_OK if the state is reversed successfully, otherwise an error code.
 smacRetCode_t smac_io_reverse_state(smacIo_t io);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_pwm PWM Interface
 /// @brief PWM interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on PWM instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create a PWM instance within the MCU abstraction layer.
@@ -1191,13 +1240,15 @@ void smac_pwm_drop(smacPwm_t pwm);
 
 /// @brief Set PWM event callbacks for the specified PWM instance.
 /// @param pwm The PWM instance.
+/// @param event The specific PWM event to set the callback for. This should be a static pointer due
+/// to SMAC will not copy it.
 /// @param data The event data to be associated with the PWM instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the PWM instance, you could don't call
 /// this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_pwm_set_event(smacPwm_t pwm, smacMcuEventData_t data);
+smacRetCode_t smac_pwm_set_event(smacPwm_t pwm, smacPwmEvent_t* event, smacMcuEventData_t data);
 
 /// @brief Clean PWM event callbacks for the specified PWM instance.
 /// @param pwm The PWM instance.
@@ -1250,10 +1301,14 @@ smacRetCode_t smac_pwm_async_activate_data(smacPwm_t pwm, const uint32_t* data, 
 /// an error code.
 smacRetCode_t smac_pwm_async_deactivate_data(smacPwm_t pwm);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_spi SPI Interface
 /// @brief SPI interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on SPI instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create an SPI instance within the MCU abstraction layer.
@@ -1270,13 +1325,15 @@ void smac_spi_drop(smacSpi_t spi);
 
 /// @brief Set SPI event callbacks for the specified SPI instance.
 /// @param spi The SPI instance.
+/// @param event The specific SPI event to set the callback for. This should be a static pointer due
+/// to SMAC will not copy it.
 /// @param data The event data to be associated with the SPI instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the SPI instance, you could don't call
 /// this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_spi_set_event(smacSpi_t spi, smacMcuEventData_t data);
+smacRetCode_t smac_spi_set_event(smacSpi_t spi, smacSpiEvent_t* event, smacMcuEventData_t data);
 
 /// @brief Clean SPI event callbacks for the specified SPI instance.
 /// @param spi The SPI instance.
@@ -1352,10 +1409,14 @@ smacRetCode_t smac_spi_async_receive(smacSpi_t spi, uint8_t* data, uint32_t size
 smacRetCode_t smac_spi_async_transmit_receive(smacSpi_t spi, const uint8_t* tx_data,
                                               uint8_t* rx_data, uint32_t size);
 
+/// @}
+
 /// ============================================================================
+/// @defgroup smac_tim Timer Interface
 /// @brief Timer interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on Timer instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create a Timer instance within the MCU abstraction layer.
@@ -1372,13 +1433,15 @@ void smac_tim_drop(smacTim_t tim);
 
 /// @brief Set Timer event callbacks for the specified Timer instance.
 /// @param tim The Timer instance.
+/// @param event The Timer event to be associated with the Timer instance. This should be a static
+/// pointer due to SMAC will not copy it.
 /// @param data The event data to be associated with the Timer instance.
 /// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
 /// @note If you don't want to use the interrupt/event of the Timer instance, you could don't call
 /// this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_tim_set_event(smacTim_t tim, smacMcuEventData_t data);
+smacRetCode_t smac_tim_set_event(smacTim_t tim, smacTimEvent_t* event, smacMcuEventData_t data);
 
 /// @brief Clean Timer event callbacks for the specified Timer instance.
 /// @param tim The Timer instance.
@@ -1439,10 +1502,13 @@ smacRetCode_t smac_tim_async_activate_data(smacTim_t tim, uint32_t* data, uint16
 /// an error code.
 smacRetCode_t smac_tim_async_deactivate_data(smacTim_t tim);
 
+/// @}
+
 /// ============================================================================
-/// @brief UART interface functions for the MCU abstraction layer.
+/// @defgroup smac_uart UART Interface
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on UART instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create a UART instance within the MCU abstraction layer.
@@ -1461,9 +1527,12 @@ void smac_uart_drop(smacUart_t uart);
 /// @details This function configures event/interrupt handling for the specified UART instance
 /// within the MCU abstraction layer.
 /// @param uart The UART instance.
+/// @param event The UART event to be associated with the UART instance. This should be a static
+/// pointer due to SMAC will not copy it.
 /// @param event_data The event data associated with the UART instance.
 /// @return @ref SMAC_RET_OK if the event handling is set successfully, otherwise an error code.
-smacRetCode_t smac_uart_set_event(smacUart_t uart, smacMcuEventData_t event_data);
+smacRetCode_t smac_uart_set_event(smacUart_t uart, smacUartEvent_t* event,
+                                  smacMcuEventData_t event_data);
 
 /// @brief Clean UART event handling for the specified UART instance.
 /// @details This function disables and cleans up event/interrupt handling for the specified UART
@@ -1551,10 +1620,13 @@ smacRetCode_t smac_uart_async_receive_size(smacUart_t uart, uint8_t* data, uint3
 /// code.
 smacRetCode_t smac_uart_async_abort(smacUart_t uart);
 
+/// @}
+
 /// ============================================================================
-/// @brief Watchdog interface functions for the MCU abstraction layer.
+/// @defgroup smac_wdt Watchdog Interface
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on Watchdog instances within the MCU abstraction layer.
+/// @{
 /// ============================================================================
 
 /// @brief Create a Watchdog instance within the MCU abstraction layer.
@@ -1573,6 +1645,8 @@ void smac_wdt_drop(smacWdt_t wdt);
 /// @details This function refreshes the specified Watchdog instance to prevent it from timing out.
 /// @param wdt The Watchdog instance to be refreshed.
 void smac_wdt_refresh(smacWdt_t wdt);
+
+/// @}
 
 #ifdef __cplusplus
 }

@@ -36,6 +36,7 @@ typedef enum
     SMAC_RET_MEM_ALLOC_FAILURE = 0x0100, ///< Memory allocation failure
     SMAC_RET_FORMAT_FAILURE    = 0x0101, ///< Format failure
     SMAC_RET_LOW_LEVEL_FAILURE = 0x0102, ///< Low-level API failure
+    SMAC_RET_DATA_NOT_ALIGNED  = 0x0103, ///< Alignment error
 
     //===============================
     //  Instance management errors 0x02
