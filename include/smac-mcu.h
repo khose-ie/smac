@@ -859,17 +859,15 @@ smacRetCode_t smac_can_fd_async_receive_channel1(smacCanFd_t canfd, smacCanFdMes
 /// @return @ref SMAC_RET_OK if the erase operation is successful, otherwise an error code.
 smacRetCode_t smac_flash_erase(uint32_t bank, uint32_t sector, uint32_t num);
 
-/// @brief Write 8-bit data to the specified Internal FLASH instance.
-/// @details This function writes the specified 8-bit data to the given address within the Internal
+/// @brief Write data to the specified Internal FLASH instance.
+/// @details This function writes the specified data to the given address within the Internal
 /// FLASH instance.
 /// @param bank The bank within the Internal FLASH instance.
 /// @param address The address within the Internal FLASH instance to write to.
-/// @param wide The write width (8-bit, 16-bit, 32-bit, or 64-bit).
 /// @param data The data to be written.
 /// @param size The size of the data to be written.
 /// @return @ref SMAC_RET_OK if the write operation is successful, otherwise an error code.
-smacRetCode_t smac_flash_write(uint32_t bank, uint32_t address, smacFlashWriteWide wide,
-                               const uint64_t data, uint32_t size);
+smacRetCode_t smac_flash_write(uint32_t bank, uint32_t address, const uint8_t* data, uint32_t size);
 
 /// @}
 
