@@ -552,6 +552,11 @@ typedef enum
 /// @return @ref SMAC_RET_OK if initialization is successful, otherwise an error code.
 smacRetCode_t smac_mcu_initialize(void);
 
+/// @brief Introduce a delay for the specified number of milliseconds.
+/// @details This function introduces a blocking delay for the specified number of milliseconds.
+/// @param milliseconds The number of milliseconds to delay.
+void smac_mcu_delay(uint32_t milliseconds);
+
 /// @}
 
 /// ============================================================================
