@@ -1511,8 +1511,8 @@ smacRetCode_t smac_spi_slave_receive(smacSpi_t spi, uint8_t* data, uint32_t size
 smacRetCode_t smac_spi_slave_async_transmit(smacSpi_t spi, const uint8_t* data, uint32_t size);
 
 /// @brief Asynchronously receive data over the specified SPI Slave instance.
-/// @details This function initiates an asynchronous reception of data over the SPI Slave instance within
-/// the MCU abstraction layer.
+/// @details This function initiates an asynchronous reception of data over the SPI Slave instance
+/// within the MCU abstraction layer.
 /// @param spi The SPI Slave instance.
 /// @param data The buffer to store the received data.
 /// @param size The size of the buffer.
@@ -1603,7 +1603,7 @@ smacRetCode_t smac_tim_async_deactivate(smacTim_t tim);
 /// @param size The size of the data.
 /// @return @ref SMAC_RET_OK if the asynchronous activation is initiated successfully, otherwise an
 /// error code.
-smacRetCode_t smac_tim_async_activate_data(smacTim_t tim, uint32_t* data, uint16_t size);
+smacRetCode_t smac_tim_async_activate_data(smacTim_t tim, const uint32_t* data, uint16_t size);
 
 /// @brief Asynchronously deactivate the specified Timer instance with associated data.
 /// @details This function initiates an asynchronous deactivation of the Timer instance within the
