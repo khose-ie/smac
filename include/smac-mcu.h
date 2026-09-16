@@ -241,21 +241,16 @@ typedef struct
     void (*pulse_complete)(smacPwm_t pwm, uint32_t channel, smacMcuEventData_t event_data);
 } smacPwmEvent_t;
 
-/// @brief Structure containing SPI event callbacks.
+/// @brief Structure containing SPI Master event callbacks.
 /// @details This structure defines the set of callback functions that are invoked in response
-/// to various SPI events, such as transmission complete, reception complete, simultaneous
-/// transmission and reception complete, abort sync completion, and error.
+/// to various SPI Master events, such as transmission complete, simultaneous transmission and
+/// reception complete, abort sync completion, and error.
 typedef struct
 {
     /// @brief SPI event callback for transmission complete.
     /// @param spi The SPI instance.
     /// @param event_data The event data associated with the transmission complete event.
     void (*tx_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
-
-    /// @brief SPI event callback for reception complete.
-    /// @param spi The SPI instance.
-    /// @param event_data The event data associated with the reception complete event.
-    void (*rx_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
 
     /// @brief SPI event callback for simultaneous transmission and reception complete.
     /// @param spi The SPI instance.
@@ -272,7 +267,34 @@ typedef struct
     /// @param spi The SPI instance.
     /// @param event_data The event data associated with the error event.
     void (*error)(smacSpi_t spi, smacMcuEventData_t event_data);
-} smacSpiEvent_t;
+} smacSpiMasterEvent_t;
+
+/// @brief Structure containing SPI Slave event callbacks.
+/// @details This structure defines the set of callback functions that are invoked in response
+/// to various SPI Slave events, such as transmission complete, reception complete, abort sync
+/// completion, and error.
+typedef struct
+{
+    /// @brief SPI event callback for transmission complete.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the transmission complete event.
+    void (*tx_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
+
+    /// @brief SPI event callback for reception complete.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the reception complete event.
+    void (*rx_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
+
+    /// @brief SPI event callback for abort sync completion.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the abort event.
+    void (*abort_complete)(smacSpi_t spi, smacMcuEventData_t event_data);
+
+    /// @brief SPI event callback for error.
+    /// @param spi The SPI instance.
+    /// @param event_data The event data associated with the error event.
+    void (*error)(smacSpi_t spi, smacMcuEventData_t event_data);
+} smacSpiSlaveEvent_t;
 
 /// @brief Structure containing Timer event callbacks.
 /// @details This structure defines the set of callback functions that are invoked in response
@@ -1318,27 +1340,27 @@ smacRetCode_t smac_pwm_async_deactivate_data(smacPwm_t pwm, uint32_t channel);
 /// @}
 
 /// ============================================================================
-/// @defgroup smac_spi SPI Interface
-/// @brief SPI interface functions for the MCU abstraction layer.
+/// @defgroup smac_spi SPI Master Interface
+/// @brief SPI Master interface functions for the MCU abstraction layer.
 /// @details These functions provide an interface for creating, dropping, and performing various
 /// operations on SPI instances within the MCU abstraction layer.
 /// @{
 /// ============================================================================
 
-/// @brief Create an SPI instance within the MCU abstraction layer.
-/// @details This function creates an SPI instance within the MCU abstraction layer, associating it
-/// with the provided handle.
+/// @brief Create an SPI Master instance within the MCU abstraction layer.
+/// @details This function creates an SPI Master instance within the MCU abstraction layer,
+/// associating it with the provided handle.
 /// @param handle The handle associated with the SPI instance.
 /// @return The created SPI instance handle.
-smacSpi_t smac_spi_create(void* handle);
+smacSpi_t smac_spi_master_create(void* handle);
 
-/// @brief Drop an SPI instance within the MCU abstraction layer.
-/// @details This function releases the resources associated with the specified SPI instance.
-/// @param spi The SPI instance to be dropped.
-void smac_spi_drop(smacSpi_t spi);
+/// @brief Drop an SPI Master instance within the MCU abstraction layer.
+/// @details This function releases the resources associated with the specified SPI Master instance.
+/// @param spi The SPI Master instance to be dropped.
+void smac_spi_master_drop(smacSpi_t spi);
 
-/// @brief Set SPI event callbacks for the specified SPI instance.
-/// @param spi The SPI instance.
+/// @brief Set SPI Master event callbacks for the specified SPI Master instance.
+/// @param spi The SPI Master instance.
 /// @param event The specific SPI event to set the callback for. This should be a static pointer due
 /// to SMAC will not copy it.
 /// @param data The event data to be associated with the SPI instance.
@@ -1347,39 +1369,35 @@ void smac_spi_drop(smacSpi_t spi);
 /// this function.
 /// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
 /// MCU driver.
-smacRetCode_t smac_spi_set_event(smacSpi_t spi, smacSpiEvent_t* event, smacMcuEventData_t data);
+smacRetCode_t smac_spi_master_set_event(smacSpi_t spi, smacSpiMasterEvent_t* event,
+                                        smacMcuEventData_t data);
 
-/// @brief Clean SPI event callbacks for the specified SPI instance.
-/// @param spi The SPI instance.
-/// @note This function will remove all event callbacks associated with the specified SPI instance.
-void smac_spi_clean_event(smacSpi_t spi);
+/// @brief Clean SPI event callbacks for the specified SPI Master instance.
+/// @param spi The SPI Master instance.
+/// @note This function will remove all event callbacks associated with the specified SPI Master
+/// instance.
+void smac_spi_master_clean_event(smacSpi_t spi);
 
-/// @brief Transmit data over the specified SPI instance.
-/// @details This function transmits the specified data over the SPI instance within the MCU
+/// @brief Transmit data over the specified SPI Master instance.
+/// @details This function transmits the specified data over the SPI Master instance within the MCU
 /// abstraction layer.
-/// @param spi The SPI instance.
+/// @param spi The SPI Master instance.
+/// @param nss The NSS (chip select) pin associated with the SPI Master instance. Keep NULL if not
+/// used.
 /// @param data The data to be transmitted.
 /// @param size The size of the data to be transmitted.
 /// @param timeout The timeout for the transmission operation. @ref SMAC_MCU_WAIT_NOW for no wait,
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the transmission is successful, otherwise an error code.
-smacRetCode_t smac_spi_transmit(smacSpi_t spi, const uint8_t* data, uint32_t size,
-                                uint32_t timeout);
+smacRetCode_t smac_spi_master_transmit(smacSpi_t spi, smacIo_t nss, const uint8_t* data,
+                                       uint32_t size, uint32_t timeout);
 
-/// @brief Receive data over the specified SPI instance.
-/// @details This function receives data over the SPI instance within the MCU abstraction layer.
-/// @param spi The SPI instance.
-/// @param data The buffer to store the received data.
-/// @param size The size of the buffer.
-/// @param timeout The timeout for the reception operation. @ref SMAC_MCU_WAIT_NOW for no wait,
-/// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
-/// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
-smacRetCode_t smac_spi_receive(smacSpi_t spi, uint8_t* data, uint32_t size, uint32_t timeout);
-
-/// @brief Transmit and receive data over the specified SPI instance.
-/// @details This function transmits and receives data over the SPI instance within the MCU
+/// @brief Transmit and receive data over the specified SPI Master instance.
+/// @details This function transmits and receives data over the SPI Master instance within the MCU
 /// abstraction layer.
-/// @param spi The SPI instance.
+/// @param spi The SPI Master instance.
+/// @param nss The NSS (chip select) pin associated with the SPI Master instance. Keep NULL if not
+/// used.
 /// @param tx_data The data to be transmitted.
 /// @param rx_data The buffer to store the received data.
 /// @param size The size of the data to be transmitted and received.
@@ -1388,40 +1406,119 @@ smacRetCode_t smac_spi_receive(smacSpi_t spi, uint8_t* data, uint32_t size, uint
 /// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
 /// @return @ref SMAC_RET_OK if the transmission and reception are successful, otherwise an error
 /// code.
-smacRetCode_t smac_spi_transmit_receive(smacSpi_t spi, const uint8_t* tx_data, uint8_t* rx_data,
-                                        uint32_t size, uint32_t timeout);
+smacRetCode_t smac_spi_master_transmit_receive(smacSpi_t spi, smacIo_t nss, const uint8_t* tx_data,
+                                               uint8_t* rx_data, uint32_t size, uint32_t timeout);
 
-/// @brief Asynchronously transmit data over the specified SPI instance.
+/// @brief Asynchronously transmit data over the specified SPI Master instance.
 /// @details This function initiates an asynchronous transmission of the specified data over the SPI
-/// instance within the MCU abstraction layer.
-/// @param spi The SPI instance.
+/// Master instance within the MCU abstraction layer.
+/// @param spi The SPI Master instance.
+/// @param nss The NSS (chip select) pin associated with the SPI Master instance. Keep NULL if not
+/// used.
 /// @param data The data to be transmitted.
 /// @param size The size of the data to be transmitted.
 /// @return @ref SMAC_RET_OK if the asynchronous transmission is initiated successfully, otherwise
 /// an error code.
-smacRetCode_t smac_spi_async_transmit(smacSpi_t spi, const uint8_t* data, uint32_t size);
+smacRetCode_t smac_spi_master_async_transmit(smacSpi_t spi, smacIo_t nss, const uint8_t* data,
+                                             uint32_t size);
 
-/// @brief Asynchronously receive data over the specified SPI instance.
-/// @details This function initiates an asynchronous reception of data over the SPI instance within
-/// the MCU abstraction layer.
-/// @param spi The SPI instance.
-/// @param data The buffer to store the received data.
-/// @param size The size of the buffer.
-/// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
-/// error code.
-smacRetCode_t smac_spi_async_receive(smacSpi_t spi, uint8_t* data, uint32_t size);
-
-/// @brief Asynchronously transmit and receive data over the specified SPI instance.
+/// @brief Asynchronously transmit and receive data over the specified SPI Master instance.
 /// @details This function initiates an asynchronous transmission and reception of data over the SPI
-/// instance within the MCU abstraction layer.
-/// @param spi The SPI instance.
+/// Master instance within the MCU abstraction layer.
+/// @param spi The SPI Master instance.
+/// @param nss The NSS (chip select) pin associated with the SPI Master instance. Keep NULL if not
+/// used.
 /// @param tx_data The data to be transmitted.
 /// @param rx_data The buffer to store the received data.
 /// @param size The size of the data to be transmitted and received.
 /// @return @ref SMAC_RET_OK if the asynchronous transmission and reception are initiated
 /// successfully, otherwise an error code.
-smacRetCode_t smac_spi_async_transmit_receive(smacSpi_t spi, const uint8_t* tx_data,
-                                              uint8_t* rx_data, uint32_t size);
+smacRetCode_t smac_spi_master_async_transmit_receive(smacSpi_t spi, smacIo_t nss,
+                                                     const uint8_t* tx_data, uint8_t* rx_data,
+                                                     uint32_t size);
+
+/// @}
+
+/// ============================================================================
+/// @defgroup smac_spi SPI Slave Interface
+/// @brief SPI Slave interface functions for the MCU abstraction layer.
+/// @details These functions provide an interface for creating, dropping, and performing various
+/// operations on SPI instances within the MCU abstraction layer.
+/// @{
+/// ============================================================================
+
+/// @brief Create an SPI Slave instance within the MCU abstraction layer.
+/// @details This function creates an SPI instance within the MCU abstraction layer, associating it
+/// with the provided handle.
+/// @param handle The handle associated with the SPI instance.
+/// @return The created SPI instance handle.
+smacSpi_t smac_spi_slave_create(void* handle);
+
+/// @brief Drop an SPI Slave instance within the MCU abstraction layer.
+/// @details This function releases the resources associated with the specified SPI instance.
+/// @param spi The SPI instance to be dropped.
+void smac_spi_slave_drop(smacSpi_t spi);
+
+/// @brief Set SPI event callbacks for the specified SPI instance.
+/// @param spi The SPI Slave instance.
+/// @param event The specific SPI event to set the callback for. This should be a static pointer due
+/// to SMAC will not copy it.
+/// @param data The event data to be associated with the SPI instance.
+/// @return @ref SMAC_RET_OK if the event is set successfully, otherwise an error code.
+/// @note If you don't want to use the interrupt/event of the SPI instance, you could don't call
+/// this function.
+/// @note This function cannot enable the interrupt and also needs you to enable the interrupt in
+/// MCU driver.
+smacRetCode_t smac_spi_slave_set_event(smacSpi_t spi, smacSpiSlaveEvent_t* event,
+                                       smacMcuEventData_t data);
+
+/// @brief Clean SPI Slave event callbacks for the specified SPI instance.
+/// @param spi The SPI Slave instance.
+/// @note This function will remove all event callbacks associated with the specified SPI instance.
+void smac_spi_slave_clean_event(smacSpi_t spi);
+
+/// @brief Transmit data over the specified SPI Slave instance.
+/// @details This function transmits the specified data over the SPI Slave instance within the MCU
+/// abstraction layer.
+/// @param spi The SPI Slave instance.
+/// @param data The data to be transmitted.
+/// @param size The size of the data to be transmitted.
+/// @param timeout The timeout for the transmission operation. @ref SMAC_MCU_WAIT_NOW for no wait,
+/// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
+/// @return @ref SMAC_RET_OK if the transmission is successful, otherwise an error code.
+smacRetCode_t smac_spi_slave_transmit(smacSpi_t spi, const uint8_t* data, uint32_t size,
+                                      uint32_t timeout);
+
+/// @brief Receive data over the specified SPI Slave instance.
+/// @details This function receives data over the SPI Slave instance within the MCU abstraction
+/// layer.
+/// @param spi The SPI Slave instance.
+/// @param data The buffer to store the received data.
+/// @param size The size of the buffer.
+/// @param timeout The timeout for the reception operation. @ref SMAC_MCU_WAIT_NOW for no wait,
+/// @ref SMAC_MCU_WAIT_FOREVER for indefinite wait.
+/// @return @ref SMAC_RET_OK if the reception is successful, otherwise an error code.
+smacRetCode_t smac_spi_slave_receive(smacSpi_t spi, uint8_t* data, uint32_t size, uint32_t timeout);
+
+/// @brief Asynchronously transmit data over the specified SPI Slave instance.
+/// @details This function initiates an asynchronous transmission of the specified data over the SPI
+/// Slave instance within the MCU abstraction layer.
+/// @param spi The SPI Slave instance.
+/// @param data The data to be transmitted.
+/// @param size The size of the data to be transmitted.
+/// @return @ref SMAC_RET_OK if the asynchronous transmission is initiated successfully, otherwise
+/// an error code.
+smacRetCode_t smac_spi_slave_async_transmit(smacSpi_t spi, const uint8_t* data, uint32_t size);
+
+/// @brief Asynchronously receive data over the specified SPI Slave instance.
+/// @details This function initiates an asynchronous reception of data over the SPI Slave instance within
+/// the MCU abstraction layer.
+/// @param spi The SPI Slave instance.
+/// @param data The buffer to store the received data.
+/// @param size The size of the buffer.
+/// @return @ref SMAC_RET_OK if the asynchronous reception is initiated successfully, otherwise an
+/// error code.
+smacRetCode_t smac_spi_slave_async_receive(smacSpi_t spi, uint8_t* data, uint32_t size);
 
 /// @}
 
