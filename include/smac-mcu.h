@@ -236,8 +236,9 @@ typedef struct
 {
     /// @brief PWM event callback for pulse completion.
     /// @param pwm The PWM instance.
+    /// @param channel The PWM channel associated with the completion event.
     /// @param event_data The event data associated with the completion event.
-    void (*pulse_complete)(smacPwm_t pwm, smacMcuEventData_t event_data);
+    void (*pulse_complete)(smacPwm_t pwm, uint32_t channel, smacMcuEventData_t event_data);
 } smacPwmEvent_t;
 
 /// @brief Structure containing SPI event callbacks.
@@ -1236,9 +1237,8 @@ smacRetCode_t smac_io_reverse_state(smacIo_t io);
 /// @details This function creates a PWM instance within the MCU abstraction layer, associating it
 /// with the provided handle and channel.
 /// @param handle The handle associated with the PWM instance.
-/// @param channel The channel number for the PWM instance.
 /// @return The created PWM instance handle.
-smacPwm_t smac_pwm_create(void* handle, uint32_t channel);
+smacPwm_t smac_pwm_create(void* handle);
 
 /// @brief Drop a PWM instance within the MCU abstraction layer.
 /// @details This function releases the resources associated with the specified PWM instance.
@@ -1265,48 +1265,55 @@ void smac_pwm_clean_event(smacPwm_t pwm);
 /// @brief Activate the specified PWM instance.
 /// @details This function activates the PWM signal generation for the specified PWM instance.
 /// @param pwm The PWM instance.
+/// @param channel The channel number for the PWM instance.
 /// @return @ref SMAC_RET_OK if the PWM is started successfully, otherwise an error code.
-smacRetCode_t smac_pwm_activate(smacPwm_t pwm);
+smacRetCode_t smac_pwm_activate(smacPwm_t pwm, uint32_t channel);
 
 /// @brief Deactivate the specified PWM instance.
 /// @details This function stops the PWM signal generation for the specified PWM instance.
 /// @param pwm The PWM instance.
+/// @param channel The channel number for the PWM instance.
 /// @return @ref SMAC_RET_OK if the PWM is deactivated successfully, otherwise an error code.
-smacRetCode_t smac_pwm_deactivate(smacPwm_t pwm);
+smacRetCode_t smac_pwm_deactivate(smacPwm_t pwm, uint32_t channel);
 
 /// @brief Asynchronously activate the specified PWM instance.
 /// @details This function initiates an asynchronous activation of the PWM signal generation for the
 /// specified PWM instance.
 /// @param pwm The PWM instance.
+/// @param channel The channel number for the PWM instance.
 /// @return @ref SMAC_RET_OK if the asynchronous start is initiated successfully, otherwise an error
 /// code.
-smacRetCode_t smac_pwm_async_activate(smacPwm_t pwm);
+smacRetCode_t smac_pwm_async_activate(smacPwm_t pwm, uint32_t channel);
 
 /// @brief Asynchronously deactivate the specified PWM instance.
 /// @details This function initiates an asynchronous deactivation of the PWM signal generation for
 /// the specified PWM instance.
 /// @param pwm The PWM instance.
+/// @param channel The channel number for the PWM instance.
 /// @return @ref SMAC_RET_OK if the asynchronous stop is initiated successfully, otherwise an error
 /// code.
-smacRetCode_t smac_pwm_async_deactivate(smacPwm_t pwm);
+smacRetCode_t smac_pwm_async_deactivate(smacPwm_t pwm, uint32_t channel);
 
 /// @brief Asynchronously activate the specified PWM instance with the provided data.
 /// @details This function initiates an asynchronous activation of the PWM signal generation for the
 /// specified PWM instance using the provided data.
 /// @param pwm The PWM instance.
+/// @param channel The channel number for the PWM instance.
 /// @param data The data to be used for the PWM signal generation.
 /// @param size The size of the data.
 /// @return @ref SMAC_RET_OK if the asynchronous activation is initiated successfully, otherwise an
 /// error code.
-smacRetCode_t smac_pwm_async_activate_data(smacPwm_t pwm, const uint32_t* data, uint16_t size);
+smacRetCode_t smac_pwm_async_activate_data(smacPwm_t pwm, uint32_t channel, const uint32_t* data,
+                                           uint16_t size);
 
 /// @brief Asynchronously deactivate the specified PWM instance with the provided data.
 /// @details This function initiates an asynchronous deactivation of the PWM signal generation for
 /// the specified PWM instance using the provided data.
 /// @param pwm The PWM instance.
+/// @param channel The channel number for the PWM instance.
 /// @return @ref SMAC_RET_OK if the asynchronous deactivation is initiated successfully, otherwise
 /// an error code.
-smacRetCode_t smac_pwm_async_deactivate_data(smacPwm_t pwm);
+smacRetCode_t smac_pwm_async_deactivate_data(smacPwm_t pwm, uint32_t channel);
 
 /// @}
 
