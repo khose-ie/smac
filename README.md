@@ -1,18 +1,6 @@
-# Sample MCU Abstract Construction
+# Simple MCU Architecture Core
 
-This project provides a standardized abstraction layer for microcontroller units (MCUs), facilitating consistent and simplified integration of embedded software across different platforms.
-
-## Features
-- Standardized API for embedded software
-- Cross-platform compatibility
-- Simplified integration process
-- Consistent error handling
-
-## Usage
-To use this platform, include the provided header files and link against the library in your embedded project. Call the functions using the standardized API to ensure compatibility across different systems.
-
-## Contributing
-Contributions are welcome. Please submit pull requests or issues to help improve the platform.
+This project provides a lightweight and modular core framework for building embedded software application on microcontroller units (MCUs).
 
 ## License
 This project is licensed under the GPLv2 License.
